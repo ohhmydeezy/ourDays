@@ -7,9 +7,10 @@ import {
   StyleSheet,
   View,
   Image,
-  SafeAreaView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import { ScrollView } from "react-native-gesture-handler";
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
@@ -17,41 +18,51 @@ export default function AuthScreen() {
   const [password, setPassword] = useState<string>("");
   const [passwordConfirm, setPasswordConfirm] = useState<string>("");
   const [error, setError] = useState<string | null>("");
+  const [firstName, setFirstName] = useState("");
+  const [surname, setSurname] = useState("");
+  const [isLoading, setIsLoading] = useState(false)
 
   const theme = useTheme();
   const router = useRouter();
   const { signIn, signUp } = useAuth();
 
   const handleAuth = async () => {
+    if(isLoading) return
+
+    setIsLoading(true)
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
     }
 
     if (password.length < 6) {
-      setError("Password must be atleast 6 charecters long");
+      setError("Password must be at least 6 characters long");
       return;
     }
 
     setError(null);
     if (isSignUp) {
-      const error = await signUp(email, password, passwordConfirm);
-      setEmail("");
-      setPassword("");
-      setPasswordConfirm("");
-      setIsSignUp(false);
+      const error = await signUp(
+        email,
+        password,
+        passwordConfirm,
+        firstName,
+        surname
+      );
       if (error) {
         setError(error);
         return;
       }
+      router.replace("/");
+      return;
     } else {
       const error = await signIn(email, password);
       if (error) {
         setError(error);
         return;
       }
-
       router.replace("/");
+      setIsLoading(false)
     }
   };
 
@@ -70,77 +81,113 @@ export default function AuthScreen() {
           { backgroundColor: !isSignUp ? "#ECFF73" : "#84E2FF" },
         ]}
       >
-        <View style={styles.homeLogo}>
-          <Text style={styles.appTitle}>OurDays</Text>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={{ width: 300, height: 300 }}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={styles.content}>
-          <Text style={styles.title} variant="headlineMedium">
-            {isSignUp ? "Register" : "Sign In"}
-          </Text>
+        <ScrollView>
+          <View style={styles.homeLogo}>
+            <Text style={styles.appTitle}>OurDays</Text>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={{ width: "80%", maxHeight: 200 }}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.content}>
+            <Text style={styles.title} variant="headlineMedium">
+              {isSignUp ? "Register" : "Sign In"}
+            </Text>
 
-          <TextInput
-            style={styles.input}
-            onChangeText={setEmail}
-            label="Email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="example@gmail.com"
-            mode="flat"
-            theme={{
-              colors: {
-                primary: "blue",
-              },
-            }}
-          ></TextInput>
-
-          <TextInput
-            style={styles.input}
-            onChangeText={setPassword}
-            label="Password"
-            autoCapitalize="none"
-            secureTextEntry
-            placeholder="Password"
-            mode="flat"
-            theme={{
-              colors: {
-                primary: "blue",
-              },
-            }}
-          ></TextInput>
-          {isSignUp && (
             <TextInput
               style={styles.input}
-              onChangeText={setPasswordConfirm}
-              label="Confirm Password"
+              onChangeText={setEmail}
+              label="Email"
               autoCapitalize="none"
-              secureTextEntry
-              placeholder="Confirm Password"
+              keyboardType="email-address"
+              placeholder="example@gmail.com"
               mode="flat"
               theme={{
                 colors: {
                   primary: "blue",
-                  background: "transparent",
                 },
               }}
-            />
-          )}
+            ></TextInput>
 
-          {error && <Text style={{ color: theme.colors.error }}>{error}</Text>}
+            <TextInput
+              style={styles.input}
+              onChangeText={setPassword}
+              label="Password"
+              autoCapitalize="none"
+              secureTextEntry
+              textContentType="oneTimeCode"
+              placeholder="Password"
+              mode="flat"
+              theme={{
+                colors: {
+                  primary: "blue",
+                },
+              }}
+            ></TextInput>
+            {isSignUp && (
+              <>
+                <TextInput
+                  style={styles.input}
+                  onChangeText={setPasswordConfirm}
+                  label="Confirm Password"
+                  autoCapitalize="none"
+                  secureTextEntry
+                  textContentType="oneTimeCode"
+                  placeholder="Confirm Password"
+                  mode="flat"
+                  theme={{
+                    colors: {
+                      primary: "blue",
+                      background: "transparent",
+                    },
+                  }}
+                />
+                <TextInput
+                  style={styles.input}
+                  onChangeText={setFirstName}
+                  label="First Name"
+                  autoCapitalize="none"
+                  placeholder="First Name"
+                  mode="flat"
+                  theme={{
+                    colors: {
+                      primary: "blue",
+                      background: "transparent",
+                    },
+                  }}
+                />
+                <TextInput
+                  style={styles.input}
+                  onChangeText={setSurname}
+                  label="Surname"
+                  autoCapitalize="none"
+                  placeholder="Surname"
+                  mode="flat"
+                  theme={{
+                    colors: {
+                      primary: "blue",
+                      background: "transparent",
+                    },
+                  }}
+                />
+              </>
+            )}
 
-          <Button style={styles.button} onPress={handleAuth} mode="contained">
-            {isSignUp ? "Sign Up" : "Sign In"}
-          </Button>
-          <Button style={styles.switchButton} onPress={handleSwitchMode}>
-            {isSignUp
-              ? "Already have an account? Sign In"
-              : "Don't Have an account? Register"}
-          </Button>
-        </View>
+            {error && (
+              <Text style={{ color: theme.colors.error }}>{error}</Text>
+            )}
+
+            <Button style={styles.button} onPress={handleAuth} mode="contained">
+              {isSignUp ? "Sign Up" : "Sign In"}
+            </Button>
+            <Button style={styles.switchButton} onPress={handleSwitchMode}>
+              {isSignUp
+                ? "Already have an account? Sign In"
+                : "Don't Have an account? Register"}
+            </Button>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

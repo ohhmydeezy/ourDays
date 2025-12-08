@@ -2,6 +2,7 @@ import { Tabs, useRouter, useSegments } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { View } from "react-native";
 
 export default function TabsLayout() {
   const router = useRouter();
@@ -9,6 +10,8 @@ export default function TabsLayout() {
   const segments = useSegments();
 
   useEffect(() => {
+    if (isLoadingUser) return;
+
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!user && !inAuthGroup && !isLoadingUser) {
@@ -16,22 +19,36 @@ export default function TabsLayout() {
     } else if (user && inAuthGroup && !isLoadingUser) {
       setTimeout(() => router.replace("/"), 0);
     }
-  }, [user, segments, router, isLoadingUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, segments, isLoadingUser]);
 
-  if (!user) return null;
+  if (isLoadingUser || !user) return null;
 
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "f5f5f5" },
+        headerStyle: { backgroundColor: "white" },
         headerShadowVisible: false,
+        tabBarShowLabel: false,
         tabBarStyle: {
-          backgroundColor: "f5f5f5",
-          borderTopWidth: 0,
-          elevation: 0,
-          shadowOpacity: 0,
+          position: "absolute",
+          left: 20,
+          right: 20,
+          height: 50,
+          borderRadius: 20,
+          backgroundColor: "#ffffff",
+          shadowColor: "#000",
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          elevation: 2,
+          borderTopWidth: 2,
+          borderStartWidth: 2,
+          borderEndWidth: 2,
+          borderColor: "#000",
+          paddingBottom: 60,
+          paddingTop: 10,
         },
-        tabBarActiveTintColor: "#6200EE",
+        tabBarActiveTintColor: "#222222ff",
         tabBarInactiveTintColor: "#666666",
       }}
     >
@@ -39,38 +56,123 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="calendar-today"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="calendar-today"
+                size={size}
+                color={color}
+              />
+              {focused && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 20,
+                    backgroundColor: "#000",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+            </View>
           ),
         }}
       />
+
       <Tabs.Screen
-        name="streaks"
+        name="profile"
         options={{
-          title: "Streaks",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="chart-line"
-              size={size}
-              color={color}
-            />
+          title: "Profile",
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="account-outline"
+                size={size}
+                color={color}
+              />
+              {focused && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 20,
+                    backgroundColor: "#000",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+            </View>
           ),
         }}
       />
+
       <Tabs.Screen
         name="add-event"
         options={{
           title: "Add Event",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons
-              name="plus-circle"
-              size={size}
-              color={color}
-            />
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ alignItems: "center" }}>
+              <MaterialCommunityIcons
+                name="plus-circle-outline"
+                size={size}
+                color={color}
+              />
+              {focused && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 20,
+                    backgroundColor: "#000",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: "Notifications",
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ alignItems: "center" }}>
+              <MaterialCommunityIcons name="bell" size={size} color={color} />
+              {focused && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 20,
+                    backgroundColor: "#000",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+            </View>
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="concierge"
+        options={{
+          title: "AI Assistant",
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={{ alignItems: "center" }}>
+              <MaterialCommunityIcons name="robot" size={size} color={color} />
+              {focused && (
+                <View
+                  style={{
+                    marginTop: 4,
+                    height: 3,
+                    width: 20,
+                    backgroundColor: "#000",
+                    borderRadius: 2,
+                  }}
+                />
+              )}
+            </View>
           ),
         }}
       />

@@ -1,14 +1,299 @@
+import { DATABASE_ID, databases, EVENTS_ID } from "../../lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
-import { View } from "react-native";
-import { Text } from "react-native-paper";
+import { useMemo, useState } from "react";
+import {
+  View,
+  StyleSheet,
+  Platform,
+  Modal,
+  TouchableOpacity,
+} from "react-native";
+import {
+  Button,
+  Text,
+  TextInput,
+  useTheme,
+  Checkbox,
+} from "react-native-paper";
+import { ID } from "react-native-appwrite";
+import { router } from "expo-router";
+import RNDateTimePicker from "@react-native-community/datetimepicker";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useEventsData } from "@/lib/events-context";
 
 export default function AddEventScreen() {
-      const { user } = useAuth();
+  const [title, setTitle] = useState("");
+  const [details, setDetails] = useState("");
+  const [location, setLocation] = useState("");
+  const [jointEvent, setJointEvent] = useState<boolean>(false);
+  const [date, setDate] = useState(new Date());
+  const [time, setTime] = useState("");
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempTime, setTempTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const { user, connectedUser } = useAuth();
+  const { fetchMyEvents, fetchPartnerEvents } = useEventsData();
+  const theme = useTheme();
 
-      return (
-        <View>
-          <Text>Hello</Text>
-        </View>
+  const isPartnerAvailable = useMemo(
+    () => !!connectedUser?.userId,
+    [connectedUser?.userId]
+  );
+
+  const handleSubmit = async () => {
+    if (!user) {
+      setError("Unauthenticated User");
+      return;
+    }
+
+    if (isSubmitted) return;
+
+    setError("");
+    setSuccess("");
+    setIsSubmitted(true);
+
+    const documentData: any = {
+      userId: user.$id,
+      title,
+      details,
+      location,
+      date: date.toISOString(),
+      time,
+      jointEvent: jointEvent,
+      status: jointEvent ? "pending" : "confirmed",
+    };
+
+    if (jointEvent) {
+      if (!isPartnerAvailable || !connectedUser.userId) {
+        setError(
+          "Cannot create a joint event: You must be connected to a partner."
+        );
+        return;
+      }
+      documentData.recipientId = connectedUser.userId;
+    }
+
+    try {
+      await databases.createDocument(
+        DATABASE_ID,
+        EVENTS_ID,
+        ID.unique(),
+        documentData
       );
 
+      await fetchMyEvents();
+      if (connectedUser?.userId) {
+        await fetchPartnerEvents();
+      }
+
+      setTitle("");
+      setDetails("");
+      setLocation("");
+      setDate(new Date());
+      setTime("");
+      setSuccess("Event successfully created!");
+      setTimeout(() => router.back(), 1000);
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+        return;
+      }
+      setError("Error creating Event");
+    }
+  };
+
+  return (
+    <SafeAreaView edges={["bottom"]} style={styles.container}>
+      <View style={styles.header}>
+        <Text style={{ color: "white", padding: 12 }}>New Event</Text>
+      </View>
+      <View style={styles.formContainer}>
+        <Button onPress={() => setShowDatePicker(true)}>Select Date</Button>
+        <Text>{date.toDateString()}</Text>
+        <Modal visible={showDatePicker} transparent animationType="slide">
+          <View style={styles.pickerContainer}>
+            <RNDateTimePicker
+              mode="date"
+              value={tempDate}
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(event, selectedDate) => {
+                if (selectedDate) setTempDate(selectedDate);
+              }}
+            />
+            <Button
+              onPress={() => {
+                setDate(tempDate);
+                setShowDatePicker(false);
+              }}
+            >
+              Confirm
+            </Button>
+            <Button onPress={() => setShowDatePicker(false)}>Cancel</Button>
+          </View>
+        </Modal>
+
+        <Button onPress={() => setShowTimePicker(true)}>Select Time</Button>
+        <Text>{time}</Text>
+        <Modal visible={showTimePicker} transparent animationType="slide">
+          <View style={styles.pickerContainer}>
+            <RNDateTimePicker
+              mode="time"
+              value={tempTime}
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={(event, selectedDate) => {
+                if (selectedDate) setTempTime(selectedDate);
+              }}
+            />
+            <Button
+              onPress={() => {
+                setTime(
+                  tempTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                );
+                setShowTimePicker(false);
+              }}
+            >
+              Confirm
+            </Button>
+            <Button onPress={() => setShowTimePicker(false)}>Cancel</Button>
+          </View>
+        </Modal>
+
+        <TextInput
+          label="Title"
+          mode="flat"
+          value={title}
+          onChangeText={setTitle}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Location"
+          mode="flat"
+          value={location}
+          onChangeText={setLocation}
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Details"
+          mode="flat"
+          value={details}
+          onChangeText={setDetails}
+          style={styles.input}
+        />
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <Text style={{ margin: 24, fontWeight: "bold" }}>
+            Is this time with your partner?
+          </Text>
+
+          <TouchableOpacity
+            style={styles.checkbox}
+            onPress={() => setJointEvent(!jointEvent)}
+            disabled={!isPartnerAvailable}
+          >
+            <Checkbox
+              status={jointEvent ? "checked" : "unchecked"}
+              onPress={() => setJointEvent(!jointEvent)}
+              color="#6200ee"
+              uncheckedColor="#999"
+              disabled={!isPartnerAvailable}
+            />
+          </TouchableOpacity>
+        </View>
+
+        <Button
+          mode="contained"
+          onPress={handleSubmit}
+          disabled={!title || !date || !time}
+          style={{ marginTop: 24 }}
+        >
+          Create
+        </Button>
+
+        {error && (
+          <Text
+            style={{
+              color: theme.colors.error,
+              fontWeight: "bold",
+              marginTop: 12,
+            }}
+          >
+            {error}
+          </Text>
+        )}
+        {success && (
+          <Text
+            style={{
+              color: theme.colors.primary,
+              marginTop: 12,
+              fontWeight: "bold",
+              textAlign: "center",
+            }}
+          >
+            {success}
+          </Text>
+        )}
+      </View>
+    </SafeAreaView>
+  );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: "#EEEEEE",
+    justifyContent: "center",
+  },
+  formContainer: {
+    flex: 1,
+    backgroundColor: "#fff",
+    marginTop: 20,
+    padding: 20,
+    width: "100%",
+    borderStartStartRadius: 25,
+    borderStartEndRadius: 25,
+    borderWidth: 2,
+    borderColor: "#AEAEAE",
+  },
+  header: {
+    backgroundColor: "#555555",
+    alignItems: "center",
+    borderRadius: 25,
+    marginBottom: 20,
+    marginTop: 10,
+  },
+  input: {
+    marginBottom: 16,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+  },
+  pickerContainer: {
+    backgroundColor: "white",
+    padding: 16,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+    justifyContent: "center",
+  },
+  checkbox: {
+    borderWidth: 2,
+    borderRadius: 50,
+    backgroundColor: "#FFD700",
+    padding: 8,
+    color: "#999",
+  },
+});
