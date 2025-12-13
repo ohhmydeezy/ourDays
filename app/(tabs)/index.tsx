@@ -33,7 +33,7 @@ export default function HomeScreen() {
         fetchPartnerEvents(),
         fetchPendingEvents(),
       ]);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       console.error("error during refresh");
     } finally {
@@ -70,28 +70,25 @@ export default function HomeScreen() {
           overshootLeft={false}
           renderLeftActions={renderLeftActions}
           onSwipeableOpen={(direction) => {
-            if (direction === "left") handleDeleteEvent(event.$id);
+            if (direction === "left") {
+              requestAnimationFrame(() => {
+                handleDeleteEvent(event.$id);
+              });
+            }
           }}
         >
           <View style={cardStyle}>
             <Text style={styles.cardTitle}>
-              {event.title}
+              {String(event.title ?? "")}
               <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
                 {" "}
                 {cardSuffix}
               </Text>
             </Text>
-            <Text style={styles.cardText}>
-              {new Date(event.time).toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-              })}
-            </Text>
-            <View style={{ flexDirection: "row" }}>
-              <Text style={styles.cardText}>{event.location}</Text>
-              <Text style={styles.cardText}>{event.details}</Text>
-            </View>
+
+            <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
+
+            <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
           </View>
         </Swipeable>
       );
@@ -109,30 +106,25 @@ export default function HomeScreen() {
 
       return (
         <View key={event.$id} style={cardStyle}>
-          <Text style={styles.cardTitle}>
-            {event.title}
-            <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
-              {" "}
-              {cardSuffix}
+          <View style={cardStyle}>
+            <Text style={styles.cardTitle}>
+              {String(event.title ?? "")}
+              <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
+                {" "}
+                {cardSuffix}
+              </Text>
             </Text>
-          </Text>
-          <Text style={styles.cardText}>
-            {new Date(event.time).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </Text>
-          <View style={{ flexDirection: "row" }}>
-            <Text style={styles.cardText}>{event.location}</Text>
-            <Text style={styles.cardText}>{event.details}</Text>
+
+            <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
+
+            <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
           </View>
         </View>
       );
     });
   };
 
-  const renderLeftActions = () => (
+  const renderLeftActions = (_progress: any, _dragX: any) => (
     <View style={styles.swipeActionLeft}>
       <MaterialCommunityIcons
         name="trash-can-outline"
@@ -149,6 +141,15 @@ export default function HomeScreen() {
     month: "short",
   });
 
+  const safeISODate = (value?: string): string | null => {
+    if (typeof value !== "string") return null;
+
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return null;
+
+    return d.toISOString().split("T")[0];
+  };
+
   const [weekday, monthDay] = formattedDate.split(", ");
 
   let rawTime = now.toLocaleTimeString("en-US", {
@@ -164,20 +165,26 @@ export default function HomeScreen() {
   const todayString = today.toISOString().split("T")[0];
 
   const todaysEvents = myEvents?.filter((event) => {
-    const eventDateString = new Date(event.date).toISOString().split("T")[0];
+    const eventDateString = safeISODate(event.date);
+    if (!eventDateString) return false;
     return eventDateString === todayString;
   });
 
   const todaysConnectedEvents = partnerEvents?.filter((event) => {
-    const eventDateString = new Date(event.date).toISOString().split("T")[0];
+    const eventDateString = safeISODate(event.date);
+    if (!eventDateString) return false;
     return eventDateString === todayString;
   });
 
   const allEventDates: { [key: string]: { dots: { color: string }[] } } = {};
 
   (myEvents ?? []).forEach((event) => {
-    const dateString = event.date.split("T")[0];
-    if (!allEventDates[dateString]) allEventDates[dateString] = { dots: [] };
+    const dateString = safeISODate(event.date);
+    if (!dateString) return;
+
+    if (!allEventDates[dateString]) {
+      allEventDates[dateString] = { dots: [] };
+    }
 
     const dotColor = event.jointEvent ? "#8873FF" : "#84E2FF";
 
@@ -187,10 +194,14 @@ export default function HomeScreen() {
   });
 
   (partnerEvents ?? []).forEach((event) => {
-    const dateString = event.date.split("T")[0];
-    if (!allEventDates[dateString]) allEventDates[dateString] = { dots: [] };
+    const dateString = safeISODate(event.date);
+    if (!dateString) return;
 
-    const dotColor = "#98ff73ff";
+    if (!allEventDates[dateString]) {
+      allEventDates[dateString] = { dots: [] };
+    }
+
+    const dotColor = event.jointEvent ? "#8873FF" : "#84E2FF";
 
     if (!allEventDates[dateString].dots.some((dot) => dot.color === dotColor)) {
       allEventDates[dateString].dots.push({ color: dotColor });
@@ -200,14 +211,14 @@ export default function HomeScreen() {
   const selectedDateEvents =
     myEvents?.filter((event) => {
       if (!selectedDate) return false;
-      const eventDateString = event.date.split("T")[0];
+      const eventDateString = safeISODate(event.date);
       return eventDateString === selectedDate;
     }) ?? [];
 
   const selectedConnectedEvents =
     partnerEvents?.filter((event) => {
       if (!selectedDate) return false;
-      const eventDateString = event.date.split("T")[0];
+      const eventDateString = safeISODate(event.date);
       return eventDateString === selectedDate;
     }) ?? [];
 
