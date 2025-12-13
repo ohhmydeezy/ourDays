@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "OurDays",
-    "slug": "OurDays",
+    "slug": "ourdays",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.OurDays"
+      "bundleIdentifier": "com.dylan.gunda.ourDays",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.OurDays"
+      "package": "com.dylan.gunda.ourDays"
     },
     "web": {
       "output": "static",
@@ -45,6 +48,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "43c4f064-71aa-4171-9887-6428b0a74e02"
+      }
+    },
+    "owner": "dylangundas-organization"
   }
 }

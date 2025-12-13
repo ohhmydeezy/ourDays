@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchConnectedUser = useCallback(async () => {
-    if (!user) {
+    if (!user || !user?.$id) {
       setConnectedUser(null);
       return;
     }
@@ -92,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching connected user:", error);
       setConnectedUser(null);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.$id]);
 
   useEffect(() => {
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!shareCode) return "Share code is required";
 
     try {
-      if (!user) return "No authenticated user found";
+      if (!user?.$id) return "No authenticated user found";
 
       const currentUserDocs = await databases.listDocuments(
         DATABASE_ID,

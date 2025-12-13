@@ -261,8 +261,8 @@ export default function HomeScreen() {
                   <Text style={styles.eventCount}>
                     Today&apos;s Events ({todaysEventCount})
                   </Text>
-                  {renderEvents(todaysEvents)}
-                  {renderConnectedEvents(todaysConnectedEvents)}
+                  {renderEvents(todaysEvents ?? [])}
+                  {renderConnectedEvents(todaysConnectedEvents ?? [])}
                 </View>
               ) : (
                 <View style={styles.noEventsContainer}>

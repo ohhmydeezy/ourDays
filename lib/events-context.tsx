@@ -34,6 +34,11 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   const [pendingEvents, setPendingEvents] = useState<Events[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const logAndAlertError = (message: string, error: unknown) => {
+    console.error(message, error);
+    console.log(`[APPWRITE ERROR] ${message}: Failed to load data.`);
+  };
+
   const fetchMyEvents = useCallback(async () => {
     if (!user?.$id) return;
     setIsLoading(true);
@@ -44,6 +49,8 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       setMyEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching my events:", error);
+      logAndAlertError("Error fetching my events:", error);
+      setMyEvents([]);
     } finally {
       setIsLoading(false);
     }
@@ -58,11 +65,13 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       setPartnerEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching partner events:", error);
+      logAndAlertError("Error fetching partner events:", error);
+      setPartnerEvents([]);
     }
   }, [connectedUser?.userId]);
 
   const fetchPendingEvents = useCallback(async () => {
-    if (!user) return;
+    if (!user?.$id) return;
 
     try {
       const result = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
@@ -80,7 +89,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user?.$id]);
 
   const handleAcceptEvent = async (event: Events) => {
     if (!user) return;
@@ -115,10 +124,12 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   };
 
   useEffect(() => {
-    fetchMyEvents();
-    fetchPartnerEvents();
-    fetchPendingEvents();
-  }, [fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
+    if (user?.$id) {
+      fetchMyEvents();
+      fetchPartnerEvents();
+      fetchPendingEvents();
+    }
+  }, [user?.$id, fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
   useEffect(() => {
     if (!user?.$id) return;
@@ -142,6 +153,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         )
       ) {
         fetchMyEvents();
+        fetchPendingEvents();
         if (connectedUser?.userId) {
           fetchPartnerEvents();
         }
