@@ -47,7 +47,25 @@
     "@types/react": "~19.1.0",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~10.0.0",
+    "react-native-codegen": "^0.70.7",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+    "react-native": {
+    "codegenConfig": {
+      "modules": [
+        {
+          "name": "RNDateTimePicker",
+          "type": "components",
+          "jsSrcsDir": "node_modules/@react-native-community/datetimepicker"
+        },
+        {
+          "name": "SafeAreaContext",
+          "type": "components",
+          "jsSrcsDir": "node_modules/react-native-safe-area-context"
+        }
+      ]
+    }
+  }
+
 }
