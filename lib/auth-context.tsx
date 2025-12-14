@@ -15,7 +15,7 @@ import {
 import { UserPrefs } from "@/types/database.type";
 
 type AuthContextType = {
-  user: Models.User<UserPrefs> | null;
+  user: SafeUser | null;
   connectedUser: any | null;
   isLoadingUser: boolean;
   signUp: (
@@ -33,17 +33,49 @@ type AuthContextType = {
   fetchConnectedUser: () => Promise<void>;
 };
 
+type SafeUser = {
+  $id: string;
+  email: string;
+  prefs: UserPrefs;
+};
+
+function toSafeUser(user: Models.User<any>): SafeUser {
+  const prefs = user.prefs ?? {};
+
+  return {
+    $id: String(user.$id),
+    email: String(user.email),
+    prefs: {
+      firstName: String(prefs.firstName ?? ""),
+      surname: String(prefs.surname ?? ""),
+      isConnected: Boolean(prefs.isConnected ?? false),
+      shareCode: prefs.shareCode ? String(prefs.shareCode) : undefined,
+    },
+  };
+}
+
+function toSafeConnectedUser(doc: any) {
+  return {
+    $id: String(doc.$id),
+    userId: String(doc.userId),
+    firstName: String(doc.firstName ?? ""),
+    surname: String(doc.surname ?? ""),
+    isConnected: Boolean(doc.isConnected),
+    connectedTo: doc.connectedTo ? String(doc.connectedTo) : null,
+  };
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<Models.User<UserPrefs> | null>(null);
+  const [user, setUser] = useState<SafeUser | null>(null);
   const [connectedUser, setConnectedUser] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(true);
 
   const getUser = useCallback(async () => {
     try {
-      const session = (await account.get()) as Models.User<UserPrefs>;
-      setUser(session);
+      const session = await account.get();
+      setUser(toSafeUser(session));
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       setUser(null);
@@ -84,7 +116,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (connectedResult.documents.length > 0) {
-        setConnectedUser(connectedResult.documents[0]);
+        setConnectedUser(toSafeConnectedUser(connectedResult.documents[0]));
       } else {
         setConnectedUser(null);
       }
@@ -92,7 +124,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error fetching connected user:", error);
       setConnectedUser(null);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.$id]);
 
   useEffect(() => {
@@ -110,8 +142,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshUser = async () => {
     try {
-      const updated = (await account.get()) as Models.User<UserPrefs>;
-      setUser(updated);
+      const updated = await account.get();
+      setUser(toSafeUser(updated));
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       setUser(null);
@@ -188,78 +220,75 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-    const unlinkAccount = async (
-      partnerUserId: string
-    ): Promise<string | null> => {
-      if (!user) return "No authenticated user found";
+  const unlinkAccount = async (
+    partnerUserId: string
+  ): Promise<string | null> => {
+    if (!user) return "No authenticated user found";
 
-      try {
-        const currentUserDocs = await databases.listDocuments(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          [Query.equal("userId", user.$id)]
-        );
-        if (!currentUserDocs.documents.length) {
-          return "Current user document not found";
-        }
-        const currentUserDocId = currentUserDocs.documents[0].$id;
-
-        const partnerDocs = await databases.listDocuments(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          [Query.equal("userId", partnerUserId)]
-        );
-
-        if (!partnerDocs.documents.length) {
-          return "Connected partner document not found";
-        }
-        const partnerDocumentId = partnerDocs.documents[0].$id;
-
-        await databases.updateDocument(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          currentUserDocId,
-          {
-            isConnected: false,
-            connectedTo: null,
-          }
-        );
-
-        await databases.updateDocument(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          partnerDocumentId,
-          {
-            isConnected: false,
-            connectedTo: null,
-          }
-        );
-        const currentPrefs = await account.getPrefs();
-        const newPrefs = {
-          ...currentPrefs,
-          isConnected: false,
-        };
-        await account.updatePrefs(newPrefs);
-
-        await refreshUser();
-        await fetchConnectedUser();
-
-        return null;
-      } catch (error) {
-        console.error("Error unlinking accounts:", error);
-        if (error instanceof Error) return error.message;
-        return "An error occurred while unlinking accounts";
+    try {
+      const currentUserDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        [Query.equal("userId", user.$id)]
+      );
+      if (!currentUserDocs.documents.length) {
+        return "Current user document not found";
       }
-    };
+      const currentUserDocId = currentUserDocs.documents[0].$id;
 
+      const partnerDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        [Query.equal("userId", partnerUserId)]
+      );
 
+      if (!partnerDocs.documents.length) {
+        return "Connected partner document not found";
+      }
+      const partnerDocumentId = partnerDocs.documents[0].$id;
 
+      await databases.updateDocument(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        currentUserDocId,
+        {
+          isConnected: false,
+          connectedTo: null,
+        }
+      );
+
+      await databases.updateDocument(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        partnerDocumentId,
+        {
+          isConnected: false,
+          connectedTo: null,
+        }
+      );
+      const currentPrefs = await account.getPrefs();
+      const newPrefs = {
+        ...currentPrefs,
+        isConnected: false,
+      };
+      await account.updatePrefs(newPrefs);
+
+      await refreshUser();
+      await fetchConnectedUser();
+
+      return null;
+    } catch (error) {
+      console.error("Error unlinking accounts:", error);
+      if (error instanceof Error) return error.message;
+      return "An error occurred while unlinking accounts";
+    }
+  };
 
   const signIn = async (email: string, password: string) => {
     try {
       await account.createEmailPasswordSession(email, password);
-      const session = (await account.get()) as Models.User<UserPrefs>;
-      setUser(session);
+      const session = await account.get();
+      setUser(toSafeUser(session));
       return null;
     } catch (error) {
       if (error instanceof Error) {
@@ -285,8 +314,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const shareCode = generateShareCode();
       await account.updatePrefs({ shareCode, firstName, surname });
 
-      const updatedUser = (await account.get()) as Models.User<UserPrefs>;
-      setUser(updatedUser);
+      const updatedUser = await account.get();
+      setUser(toSafeUser(updatedUser));
 
       await databases.createDocument(
         DATABASE_ID,
@@ -333,7 +362,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         linkAccount,
         connectedUser,
         fetchConnectedUser,
-        unlinkAccount
+        unlinkAccount,
       }}
     >
       {children}

@@ -26,10 +26,13 @@ export default function AuthScreen() {
   const router = useRouter();
   const { signIn, signUp } = useAuth();
 
-  const handleAuth = async () => {
-    if(isLoading) return
+const handleAuth = async () => {
+  if (isLoading) return;
 
-    setIsLoading(true)
+  setIsLoading(true);
+  setError(null);
+
+  try {
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
@@ -40,7 +43,6 @@ export default function AuthScreen() {
       return;
     }
 
-    setError(null);
     if (isSignUp) {
       const error = await signUp(
         email,
@@ -53,18 +55,20 @@ export default function AuthScreen() {
         setError(error);
         return;
       }
-      router.replace("/");
-      return;
     } else {
       const error = await signIn(email, password);
       if (error) {
         setError(error);
         return;
       }
-      router.replace("/");
-      setIsLoading(false)
     }
-  };
+
+    router.replace("/");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleSwitchMode = () => {
     setIsSignUp((prev) => !prev);
