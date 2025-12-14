@@ -398,6 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 2,
     borderColor: "#fff",
+
   },
   jointCard: {
     backgroundColor: "#8873FF",
@@ -415,10 +416,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,
+    color: "#000"
   },
   cardText: {
     fontSize: 14,
     marginRight: 10,
+    color: "#000"
   },
   noEventsContainer: {
     flex: 1,

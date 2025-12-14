@@ -44,7 +44,6 @@ export default function AddEventScreen() {
     [connectedUser?.userId]
   );
 
-
   const handleSubmit = async () => {
     if (!user) {
       setError("Unauthenticated User");
@@ -113,7 +112,9 @@ export default function AddEventScreen() {
         <Text style={{ color: "white", padding: 12 }}>New Event</Text>
       </View>
       <View style={styles.formContainer}>
-        <Button onPress={() => setShowDatePicker(true)}>Select Date</Button>
+        <Button textColor="#000" onPress={() => setShowDatePicker(true)}>
+          Select Date
+        </Button>
         <Text>{date.toDateString()}</Text>
         <Modal visible={showDatePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
@@ -134,11 +135,15 @@ export default function AddEventScreen() {
             >
               Confirm
             </Button>
-            <Button onPress={() => setShowDatePicker(false)}>Cancel</Button>
+            <Button textColor="#000" onPress={() => setShowDatePicker(false)}>
+              Cancel
+            </Button>
           </View>
         </Modal>
 
-        <Button onPress={() => setShowTimePicker(true)}>Select Time</Button>
+        <Button textColor="#000" onPress={() => setShowTimePicker(true)}>
+          Select Time
+        </Button>
         <Text>{time}</Text>
         <Modal visible={showTimePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
@@ -152,6 +157,7 @@ export default function AddEventScreen() {
               }}
             />
             <Button
+              textColor="#000"
               onPress={() => {
                 setTime(
                   tempTime.toLocaleTimeString([], {
@@ -165,12 +171,15 @@ export default function AddEventScreen() {
             >
               Confirm
             </Button>
-            <Button onPress={() => setShowTimePicker(false)}>Cancel</Button>
+            <Button textColor="#000" onPress={() => setShowTimePicker(false)}>
+              Cancel
+            </Button>
           </View>
         </Modal>
 
         <TextInput
           label="Title"
+          textColor="#000"
           mode="flat"
           value={title}
           onChangeText={setTitle}
@@ -179,6 +188,7 @@ export default function AddEventScreen() {
 
         <TextInput
           label="Location"
+          textColor="#000"
           mode="flat"
           value={location}
           onChangeText={setLocation}
@@ -187,6 +197,7 @@ export default function AddEventScreen() {
 
         <TextInput
           label="Details"
+          textColor="#000"
           mode="flat"
           value={details}
           onChangeText={setDetails}
@@ -199,7 +210,7 @@ export default function AddEventScreen() {
             justifyContent: "center",
           }}
         >
-          <Text style={{ margin: 24, fontWeight: "bold" }}>
+          <Text style={{ margin: 24, fontWeight: "bold", color: "#000" }}>
             Is this time with your partner?
           </Text>
 

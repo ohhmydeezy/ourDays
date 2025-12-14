@@ -103,9 +103,11 @@ const handleAuth = async () => {
               style={styles.input}
               onChangeText={setEmail}
               label="Email"
+              textColor="#000"
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="example@gmail.com"
+              placeholderTextColor="#000"
               mode="flat"
               theme={{
                 colors: {
@@ -118,14 +120,17 @@ const handleAuth = async () => {
               style={styles.input}
               onChangeText={setPassword}
               label="Password"
+              textColor="#000"
               autoCapitalize="none"
               secureTextEntry
               textContentType="oneTimeCode"
+              placeholderTextColor="#000"
               placeholder="Password"
               mode="flat"
               theme={{
                 colors: {
                   primary: "blue",
+                  text: "#000",
                 },
               }}
             ></TextInput>
@@ -135,10 +140,12 @@ const handleAuth = async () => {
                   style={styles.input}
                   onChangeText={setPasswordConfirm}
                   label="Confirm Password"
+                  textColor="#000"
                   autoCapitalize="none"
                   secureTextEntry
                   textContentType="oneTimeCode"
                   placeholder="Confirm Password"
+                  placeholderTextColor="#000"
                   mode="flat"
                   theme={{
                     colors: {
@@ -151,8 +158,10 @@ const handleAuth = async () => {
                   style={styles.input}
                   onChangeText={setFirstName}
                   label="First Name"
+                  textColor="#000"
                   autoCapitalize="none"
                   placeholder="First Name"
+                  placeholderTextColor="#000"
                   mode="flat"
                   theme={{
                     colors: {
@@ -165,8 +174,10 @@ const handleAuth = async () => {
                   style={styles.input}
                   onChangeText={setSurname}
                   label="Surname"
+                  textColor="#000"
                   autoCapitalize="none"
                   placeholder="Surname"
+                  placeholderTextColor="#000"
                   mode="flat"
                   theme={{
                     colors: {
@@ -182,10 +193,19 @@ const handleAuth = async () => {
               <Text style={{ color: theme.colors.error }}>{error}</Text>
             )}
 
-            <Button textColor="#999" style={styles.button} onPress={handleAuth} mode="contained">
+            <Button
+              textColor="#999"
+              style={styles.button}
+              onPress={handleAuth}
+              mode="contained"
+            >
               {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
-            <Button textColor="#000" style={styles.switchButton} onPress={handleSwitchMode}>
+            <Button
+              textColor="#000"
+              style={styles.switchButton}
+              onPress={handleSwitchMode}
+            >
               {isSignUp
                 ? "Already have an account? Sign In"
                 : "Don't Have an account? Register"}
