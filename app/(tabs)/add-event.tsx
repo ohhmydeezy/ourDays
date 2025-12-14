@@ -115,7 +115,7 @@ export default function AddEventScreen() {
         <Button textColor="#000" onPress={() => setShowDatePicker(true)}>
           Select Date
         </Button>
-        <Text>{date.toDateString()}</Text>
+        <Text style={styles.text}>{date.toDateString()}</Text>
         <Modal visible={showDatePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
             <RNDateTimePicker
@@ -145,7 +145,7 @@ export default function AddEventScreen() {
         <Button textColor="#000" onPress={() => setShowTimePicker(true)}>
           Select Time
         </Button>
-        <Text>{time}</Text>
+        <Text style={styles.text}>{time}</Text>
         <Modal visible={showTimePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
             <RNDateTimePicker
@@ -311,4 +311,8 @@ const styles = StyleSheet.create({
     padding: 8,
     color: "#999",
   },
+  text: {
+    color: "#000",
+    fontWeight: "bold"
+  }
 });
