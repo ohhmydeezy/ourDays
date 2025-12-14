@@ -200,6 +200,7 @@ export default function AccountDetailsScreen() {
         <View style={styles.inputGroup}>
           <TextInput
             label="First Name"
+            textColor="#000"
             mode="flat"
             value={firstName}
             onChangeText={setFirstName}
@@ -209,6 +210,7 @@ export default function AccountDetailsScreen() {
           <TextInput
             label="Surname"
             mode="flat"
+            textColor="#000"
             value={surname}
             onChangeText={setSurname}
             autoCapitalize="words"
@@ -346,6 +348,7 @@ const styles = StyleSheet.create({
   keyInfo: {
     fontWeight: "bold",
     padding: 4,
+    color: "#000"
   },
   info: {
     textAlign: "center",
@@ -387,6 +390,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginBottom: 8,
+    color:"#000"
   },
   confirmationRow: {
     flexDirection: "row",

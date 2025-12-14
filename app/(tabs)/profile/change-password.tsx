@@ -80,6 +80,7 @@ export default function ChangePasswordScreen() {
         <TextInput
           label="Current Password"
           mode="flat"
+          textColor="#000"
           value={currentPassword}
           onChangeText={setCurrentPassword}
           secureTextEntry
@@ -90,6 +91,7 @@ export default function ChangePasswordScreen() {
         <TextInput
           label="New Password (min 8 chars)"
           mode="flat"
+          textColor="#000"
           value={newPassword}
           onChangeText={setNewPassword}
           secureTextEntry
@@ -100,6 +102,7 @@ export default function ChangePasswordScreen() {
         <TextInput
           label="Confirm New Password"
           mode="flat"
+          textColor="#000"
           value={confirmPassword}
           onChangeText={setConfirmPassword}
           secureTextEntry

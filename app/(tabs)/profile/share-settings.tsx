@@ -55,6 +55,7 @@ export default function ShareSettingsScreen() {
           style={{
             justifyContent: "center",
             fontWeight: "semibold",
+            color: "#000",
             textAlign: "center",
           }}
         >
@@ -63,11 +64,12 @@ export default function ShareSettingsScreen() {
         <TextInput
           label="Share Code"
           mode="flat"
+          textColor="#000"
           value={shareCode}
           onChangeText={setShareCode}
           style={styles.input}
         />
-        <Button mode="contained" onPress={handleSubmit} disabled={!shareCode}>
+        <Button mode="contained" textColor="#000" onPress={handleSubmit} disabled={!shareCode}>
           Sync Calender
         </Button>
 

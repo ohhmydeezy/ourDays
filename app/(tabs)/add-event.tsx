@@ -20,6 +20,7 @@ import { router } from "expo-router";
 import RNDateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEventsData } from "@/lib/events-context";
+import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "@/lib/native-notify";
 
 export default function AddEventScreen() {
   const [title, setTitle] = useState("");
@@ -43,6 +44,57 @@ export default function AddEventScreen() {
     () => !!connectedUser?.userId,
     [connectedUser?.userId]
   );
+
+  const sendPushNotification = async (
+    recipientToken: string | undefined,
+    eventTitle: string,
+    senderName: string
+  ) => {
+    // We expect the recipientToken to be stored in connectedUser.nativeNotifyToken
+    if (!recipientToken) {
+      console.warn("Recipient push token is missing. Notification skipped.");
+      return;
+    }
+
+    try {
+      const notificationData = {
+        appId: NATIVE_NOTIFY_APP_ID,
+        appToken: NATIVE_NOTIFY_APP_TOKEN,
+        // Target only the recipient's push token
+        pushToken: recipientToken,
+        title: "You Have An Invite!",
+        body: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
+        data: {
+          eventTitle,
+          sender: senderName,
+          type: "joint_event_invite",
+        },
+      };
+
+      const response = await fetch(
+        "https://app.nativenotify.com/api/indie/push",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(notificationData),
+        }
+      );
+
+      const responseData = await response.json();
+      if (response.ok) {
+        console.log(
+          "Native Notify push notification dispatched successfully:",
+          responseData
+        );
+      } else {
+        console.error("Native Notify push error:", responseData);
+      }
+    } catch (e) {
+      console.error("Network or API error sending push notification:", e);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!user) {
@@ -72,6 +124,7 @@ export default function AddEventScreen() {
         setError(
           "Cannot create a joint event: You must be connected to a partner."
         );
+        setIsSubmitted(false); 
         return;
       }
       documentData.recipientId = connectedUser.userId;
@@ -84,10 +137,17 @@ export default function AddEventScreen() {
         ID.unique(),
         documentData
       );
-
       await fetchMyEvents();
       if (connectedUser?.userId) {
         await fetchPartnerEvents();
+      }
+
+      if (jointEvent) {
+        await sendPushNotification(
+          connectedUser.nativeNotifyToken as string,
+          title,
+          user.prefs.firstName || user.email 
+        );
       }
 
       setTitle("");
@@ -103,6 +163,8 @@ export default function AddEventScreen() {
         return;
       }
       setError("Error creating Event");
+    } finally {
+      setIsSubmitted(false);
     }
   };
 

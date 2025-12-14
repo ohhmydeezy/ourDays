@@ -4,14 +4,18 @@ import { View, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { Calendar } from "react-native-calendars";
-import { DATABASE_ID, databases, EVENTS_ID } from "../../lib/appwrite";
+import { account, DATABASE_ID, databases, EVENTS_ID, USER_COLLECTION_ID } from "../../lib/appwrite";
 import { Events } from "@/types/database.type";
 import { ScrollView, Swipeable } from "react-native-gesture-handler";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEventsData } from "@/lib/events-context";
+import registerNNPushToken from "native-notify";
+import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "@/lib/native-notify";
+import { Query } from "react-native-appwrite";
 
 export default function HomeScreen() {
-  const { user, connectedUser } = useAuth();
+  registerNNPushToken(NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN);
+  const { user, connectedUser, refreshUser } = useAuth();
   const [isCalenderView, setCalenderView] = useState<boolean>(false);
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [isRefresh, setIsRefresh] = useState(false);
@@ -49,6 +53,59 @@ export default function HomeScreen() {
     };
   }, []);
 
+  // 🔑 Get the Native Notify token and save it to Appwrite
+  useEffect(() => {
+    // Check if the user is authenticated and we haven't already saved a token this session
+    if (user?.$id && user?.prefs?.nativeNotifyToken === undefined) {
+      const saveTokenToAppwrite = async () => {
+        try {
+          // 1. Get the newly registered push token. We assert the type to string | null
+          // because getPushToken is expected to return the token, but the environment's types
+          // might incorrectly declare it as returning void.
+          const token = (await getPushToken(
+            NATIVE_NOTIFY_APP_ID,
+            NATIVE_NOTIFY_APP_TOKEN
+          )) as string | undefined | null;
+
+          if (!token) return;
+
+          // 2. Update the user's Appwrite preferences with the token
+          const currentPrefs = await account.getPrefs();
+          await account.updatePrefs({
+            ...currentPrefs,
+            nativeNotifyToken: token,
+          });
+
+          // 3. Update the user's profile document in the database (for connectedUser sync)
+          const userDocs = await databases.listDocuments(
+            DATABASE_ID,
+            USER_COLLECTION_ID,
+            [Query.equal("userId", user.$id)]
+          );
+
+          if (userDocs.documents.length > 0) {
+            await databases.updateDocument(
+              DATABASE_ID,
+              USER_COLLECTION_ID,
+              userDocs.documents[0].$id,
+              {
+                nativeNotifyToken: token, // Save the token here for partner access
+              }
+            );
+          }
+
+          // 4. Force a user context refresh to sync the new token
+          await refreshUser();
+          console.log("Successfully saved Native Notify token to Appwrite.");
+        } catch (error) {
+          console.error("Error saving push token to Appwrite:", error);
+        }
+      };
+
+      saveTokenToAppwrite();
+    }
+  }, [refreshUser, user?.$id, user?.prefs?.nativeNotifyToken]); 
+  // ----------------------------------------------------
 
   const handleDeleteEvent = async (id: string) => {
     try {
@@ -116,17 +173,17 @@ export default function HomeScreen() {
 
       return (
         <View key={event.$id} style={cardStyle}>
-            <Text style={styles.cardTitle}>
-              {String(event.title ?? "")}
-              <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
-                {" "}
-                {cardSuffix}
-              </Text>
+          <Text style={styles.cardTitle}>
+            {String(event.title ?? "")}
+            <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
+              {" "}
+              {cardSuffix}
             </Text>
+          </Text>
 
-            <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
+          <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
 
-            <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
+          <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
         </View>
       );
     });
@@ -444,3 +501,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
+function getPushToken(NATIVE_NOTIFY_APP_ID: number, NATIVE_NOTIFY_APP_TOKEN: string) {
+  throw new Error("Function not implemented.");
+}
+
