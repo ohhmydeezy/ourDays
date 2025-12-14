@@ -128,6 +128,7 @@ export default function AddEventScreen() {
               }}
             />
             <Button
+              textColor="#000"
               onPress={() => {
                 setDate(tempDate);
                 setShowDatePicker(false);
