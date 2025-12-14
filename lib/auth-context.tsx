@@ -13,6 +13,12 @@ import {
   USER_COLLECTION_ID,
 } from "./appwrite";
 import { UserPrefs } from "@/types/database.type";
+import * as NativeNotify from "native-notify";
+import {
+  NATIVE_NOTIFY_APP_ID,
+  NATIVE_NOTIFY_APP_TOKEN,
+} from "@/lib/native-notify";
+
 
 type AuthContextType = {
   user: SafeUser | null;
@@ -139,6 +145,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setConnectedUser(null);
     }
   }, [user?.$id, fetchConnectedUser]);
+
+  useEffect(() => {
+    if (!user?.$id) return;
+
+    NativeNotify.registerIndieID(
+      user.$id,
+      NATIVE_NOTIFY_APP_ID,
+      NATIVE_NOTIFY_APP_TOKEN
+    );
+
+    console.log("Native Notify registered:", user.$id);
+  }, [user?.$id]);
 
   const refreshUser = async () => {
     try {

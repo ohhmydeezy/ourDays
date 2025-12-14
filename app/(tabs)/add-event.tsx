@@ -46,53 +46,40 @@ export default function AddEventScreen() {
   );
 
   const sendPushNotification = async (
-    recipientToken: string | undefined,
+    recipientSubId: string,
     eventTitle: string,
     senderName: string
   ) => {
-    // We expect the recipientToken to be stored in connectedUser.nativeNotifyToken
-    if (!recipientToken) {
-      console.warn("Recipient push token is missing. Notification skipped.");
-      return;
-    }
-
     try {
-      const notificationData = {
-        appId: NATIVE_NOTIFY_APP_ID,
-        appToken: NATIVE_NOTIFY_APP_TOKEN,
-        // Target only the recipient's push token
-        pushToken: recipientToken,
-        title: "You Have An Invite!",
-        body: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
-        data: {
-          eventTitle,
-          sender: senderName,
-          type: "joint_event_invite",
-        },
-      };
-
       const response = await fetch(
         "https://app.nativenotify.com/api/indie/push",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(notificationData),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            appId: NATIVE_NOTIFY_APP_ID,
+            appToken: NATIVE_NOTIFY_APP_TOKEN,
+            subID: recipientSubId,
+            title: "You Have An Invite!",
+            message: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
+            data: {
+              type: "joint_event_invite",
+              eventTitle,
+              sender: senderName,
+            },
+          }),
         }
       );
 
-      const responseData = await response.json();
-      if (response.ok) {
-        console.log(
-          "Native Notify push notification dispatched successfully:",
-          responseData
-        );
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Native Notify error:", data);
       } else {
-        console.error("Native Notify push error:", responseData);
+        console.log("Push sent:", data);
       }
-    } catch (e) {
-      console.error("Network or API error sending push notification:", e);
+    } catch (err) {
+      console.error("Push request failed:", err);
     }
   };
 
@@ -143,11 +130,11 @@ export default function AddEventScreen() {
       }
 
       if (jointEvent) {
-        await sendPushNotification(
-          connectedUser.nativeNotifyToken as string,
-          title,
-          user.prefs.firstName || user.email 
-        );
+       await sendPushNotification(
+         connectedUser.userId,
+         title,
+         user.prefs?.firstName || user.email
+       );
       }
 
       setTitle("");

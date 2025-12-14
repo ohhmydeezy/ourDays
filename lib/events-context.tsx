@@ -11,6 +11,7 @@ import { Query } from "appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { Events } from "@/types/database.type";
 import { Alert } from "react-native";
+import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "./native-notify";
 
 interface EventsContextType {
   myEvents: Events[];
@@ -26,7 +27,6 @@ interface EventsContextType {
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined);
 
-
 export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   children,
 }) => {
@@ -38,12 +38,13 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
 
   const isMounted = useRef(true);
 
+  // Proper single isMounted setup
   useEffect(() => {
+    isMounted.current = true;
     return () => {
       isMounted.current = false;
     };
   }, []);
-
 
   const logAndAlertError = (message: string, error: unknown) => {
     console.error(message, error);
@@ -57,7 +58,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("userId", user.$id),
       ]);
-      if(!isMounted.current) return
+      if (!isMounted.current) return;
       setMyEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching my events:", error);
@@ -105,66 +106,108 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     }
   }, [user?.$id]);
 
+  // Centralized notification function
+  const notifyEventStatus = async (
+    recipientUserId: string,
+    eventTitle: string,
+    status: "confirmed" | "declined"
+  ) => {
+    if (!recipientUserId) return;
+
+    try {
+      const res = await fetch("https://app.nativenotify.com/api/indie/push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId: NATIVE_NOTIFY_APP_ID,
+          appToken: NATIVE_NOTIFY_APP_TOKEN,
+          subID: recipientUserId,
+          title:
+            status === "confirmed" ? "Event Accepted 🎉" : "Event Declined",
+          message:
+            status === "confirmed"
+              ? `Your event "${eventTitle}" was accepted 🎉`
+              : `Your event "${eventTitle}" was declined`,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        console.error("Native Notify error:", data);
+      }
+    } catch (err) {
+      console.error("Push request failed:", err);
+    }
+  };
+
   const handleAcceptEvent = async (event: Events) => {
     if (!user) return;
+
     try {
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "confirmed",
       });
+
+      if (event.userId !== user.$id) {
+        await notifyEventStatus(event.userId, event.title, "confirmed");
+      }
+
       if (!isMounted.current) return;
       await fetchPendingEvents();
       await fetchMyEvents();
-      if (connectedUser?.userId) {
-        await fetchPartnerEvents();
-      }
+      await fetchPartnerEvents();
     } catch (error) {
       console.error("Error accepting event:", error);
     }
   };
 
   const handleDeclineEvent = async (event: Events) => {
+    if (!user) return;
+
     try {
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "declined",
       });
+
+      if (event.userId !== user.$id) {
+        await notifyEventStatus(event.userId, event.title, "declined");
+      }
+
       if (!isMounted.current) return;
       await fetchPendingEvents();
       await fetchMyEvents();
-      if (connectedUser?.userId) {
-        await fetchPartnerEvents();
-      }
+      await fetchPartnerEvents();
     } catch (error) {
       console.error("Error declining event:", error);
     }
   };
 
+  // Initial fetch of events
   useEffect(() => {
-    if(!user?.$id) return
-    isMounted.current = true
+    if (!user?.$id) return;
 
-      fetchMyEvents();
-      fetchPartnerEvents();
-      fetchPendingEvents();
-
-      return () => {
-        isMounted.current = false
-      }
-    
+    fetchMyEvents();
+    fetchPartnerEvents();
+    fetchPendingEvents();
   }, [user?.$id, fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
+  // Realtime subscription
   useEffect(() => {
     if (!user?.$id) return;
 
     const eventsChannel = `databases.${DATABASE_ID}.collections.${EVENTS_ID}.documents`;
 
     const eventsSubscription = client.subscribe(eventsChannel, (response) => {
-        if (!isMounted.current) return;
-      const payload = response.payload as any;
-      if (!payload) return; 
+      if (!isMounted.current) return;
 
-      const isRelevant =
-        payload?.userId === user.$id ||
-        payload?.userId === connectedUser?.userId;
+      const payload = response.payload as any;
+      if (!payload) return;
+
+    const isRelevant =
+      payload?.userId === user.$id ||
+      payload?.recipientId === user.$id ||
+      payload?.userId === connectedUser?.userId ||
+      payload?.recipientId === connectedUser?.userId;
 
       if (
         isRelevant &&
@@ -178,9 +221,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       ) {
         fetchMyEvents();
         fetchPendingEvents();
-        if (connectedUser?.userId) {
-          fetchPartnerEvents();
-        }
+        if (connectedUser?.userId) fetchPartnerEvents();
       }
     });
 
