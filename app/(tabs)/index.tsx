@@ -364,6 +364,7 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 24,
     fontWeight: "semibold",
+    color: "#000",
   },
   seperator: {
     width: 2,
@@ -374,6 +375,7 @@ const styles = StyleSheet.create({
   time: {
     fontSize: 24,
     fontWeight: "bold",
+    color: "#000",
   },
   eventsLog: {
     flex: 1,

@@ -60,6 +60,7 @@ export default function ProfileScreen() {
                 textAlign: "center",
                 padding: 12,
                 fontWeight: "bold",
+                color: "#000",
               }}
             >
               {user?.prefs.firstName} {user?.prefs.surname}

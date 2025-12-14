@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 32,
     alignItems: "center",
+    color: "#000",
   },
   homeLogo: {
     alignItems: "center",
@@ -219,11 +220,13 @@ const styles = StyleSheet.create({
   title: {
     textAlign: "center",
     marginBottom: 24,
+    color: "#000",
   },
   input: {
     marginBottom: 16,
     backgroundColor: "transparent",
     borderBottomWidth: 1,
+    color: "#000",
   },
   button: {
     marginTop: 8,
@@ -231,5 +234,6 @@ const styles = StyleSheet.create({
   },
   switchButton: {
     marginTop: 16,
+    color: "#000",
   },
 });

@@ -120,6 +120,7 @@ export default function AddEventScreen() {
             <RNDateTimePicker
               mode="date"
               value={tempDate}
+              themeVariant="light"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={(event, selectedDate) => {
                 if (selectedDate) setTempDate(selectedDate);
@@ -144,6 +145,7 @@ export default function AddEventScreen() {
             <RNDateTimePicker
               mode="time"
               value={tempTime}
+              themeVariant="light"
               display={Platform.OS === "ios" ? "spinner" : "default"}
               onChange={(event, selectedDate) => {
                 if (selectedDate) setTempTime(selectedDate);

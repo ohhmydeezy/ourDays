@@ -11,7 +11,7 @@ export default function RootLayout() {
     const { isLoadingUser } = useAuth();
 
     if (isLoadingUser) {
-      return null; // or splash
+      return null; 
     }
 
     return <Slot />;
