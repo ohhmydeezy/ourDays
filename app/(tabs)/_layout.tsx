@@ -1,29 +1,26 @@
-import { Tabs, useRouter, useSegments } from "expo-router";
+import { Redirect, Tabs, useSegments } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { View } from "react-native";
 
 export default function TabsLayout() {
-  const router = useRouter();
   const { user, isLoadingUser } = useAuth();
   const segments = useSegments();
 
-  useEffect(() => {
+
     if (isLoadingUser) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
-    if (!user && !inAuthGroup && !isLoadingUser) {
-      setTimeout(() => router.replace("/(auth)/login"), 0);
-    } else if (user && inAuthGroup && !isLoadingUser) {
-      setTimeout(() => router.replace("/"), 0);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, segments, isLoadingUser]);
+  if (!user && !inAuthGroup) {
+    return <Redirect href="/(auth)/login" />;
+  }
 
-  if (isLoadingUser || !user) return null;
+  if (user && inAuthGroup) {
+    return <Redirect href="/" />;
+  }
 
+  
   return (
     <Tabs
       screenOptions={{

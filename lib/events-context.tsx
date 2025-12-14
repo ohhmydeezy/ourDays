@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useEffect,
+  useRef,
 } from "react";
 import { client, DATABASE_ID, databases, EVENTS_ID } from "./appwrite";
 import { Query } from "appwrite";
@@ -25,6 +26,7 @@ interface EventsContextType {
 
 const EventsContext = createContext<EventsContextType | undefined>(undefined);
 
+
 export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   children,
 }) => {
@@ -33,6 +35,15 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   const [partnerEvents, setPartnerEvents] = useState<Events[]>([]);
   const [pendingEvents, setPendingEvents] = useState<Events[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
 
   const logAndAlertError = (message: string, error: unknown) => {
     console.error(message, error);
@@ -46,6 +57,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("userId", user.$id),
       ]);
+      if(!isMounted.current) return
       setMyEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching my events:", error);
@@ -62,6 +74,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("userId", connectedUser.userId),
       ]);
+      if (!isMounted.current) return;
       setPartnerEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching partner events:", error);
@@ -78,6 +91,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         Query.equal("status", "pending"),
         Query.equal("recipientId", user.$id),
       ]);
+      if (!isMounted.current) return;
       setPendingEvents(result.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching pending events:", error);
@@ -97,6 +111,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "confirmed",
       });
+      if (!isMounted.current) return;
       await fetchPendingEvents();
       await fetchMyEvents();
       if (connectedUser?.userId) {
@@ -112,7 +127,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "declined",
       });
-
+      if (!isMounted.current) return;
       await fetchPendingEvents();
       await fetchMyEvents();
       if (connectedUser?.userId) {
@@ -124,11 +139,17 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   };
 
   useEffect(() => {
-    if (user?.$id) {
+    if(!user?.$id) return
+    isMounted.current = true
+
       fetchMyEvents();
       fetchPartnerEvents();
       fetchPendingEvents();
-    }
+
+      return () => {
+        isMounted.current = false
+      }
+    
   }, [user?.$id, fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
   useEffect(() => {
@@ -137,7 +158,10 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     const eventsChannel = `databases.${DATABASE_ID}.collections.${EVENTS_ID}.documents`;
 
     const eventsSubscription = client.subscribe(eventsChannel, (response) => {
+        if (!isMounted.current) return;
       const payload = response.payload as any;
+      if (!payload) return; 
+
       const isRelevant =
         payload?.userId === user.$id ||
         payload?.userId === connectedUser?.userId;

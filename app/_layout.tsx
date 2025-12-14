@@ -1,4 +1,4 @@
-import { AuthProvider } from "@/lib/auth-context";
+import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { EventsDataProvider } from "@/lib/events-context";
 import { Slot } from "expo-router";
 import React from "react";
@@ -7,13 +7,23 @@ import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
+  function AuthGate() {
+    const { isLoadingUser } = useAuth();
+
+    if (isLoadingUser) {
+      return null; // or splash
+    }
+
+    return <Slot />;
+  }
+  
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <EventsDataProvider>
           <PaperProvider>
             <SafeAreaProvider>
-              <Slot />
+              <AuthGate />
             </SafeAreaProvider>
           </PaperProvider>
         </EventsDataProvider>

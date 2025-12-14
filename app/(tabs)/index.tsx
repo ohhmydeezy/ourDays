@@ -1,5 +1,5 @@
 import { useAuth } from "../../lib/auth-context";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { View, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
@@ -41,6 +41,15 @@ export default function HomeScreen() {
     }
   }, [fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+
   const handleDeleteEvent = async (id: string) => {
     try {
       await databases.deleteDocument(DATABASE_ID, EVENTS_ID, id);
@@ -51,7 +60,7 @@ export default function HomeScreen() {
   };
 
   const renderEvents = (renderedEvents: Events[]) => {
-    if (!user) return;
+    if (!user) return null;
 
     return renderedEvents.map((event) => {
       const isJointEvent = event.jointEvent;
@@ -72,6 +81,7 @@ export default function HomeScreen() {
           onSwipeableOpen={(direction) => {
             if (direction === "left") {
               requestAnimationFrame(() => {
+                if (!isMounted.current) return;
                 handleDeleteEvent(event.$id);
               });
             }
@@ -96,7 +106,7 @@ export default function HomeScreen() {
   };
 
   const renderConnectedEvents = (connectedEvents: Events[]) => {
-    if (!connectedUser) return;
+    if (!connectedUser) return null;
     return connectedEvents.map((event) => {
       const isJointEvent = event.jointEvent;
       const cardStyle = isJointEvent ? styles.jointCard : styles.partnerCard;
@@ -106,7 +116,6 @@ export default function HomeScreen() {
 
       return (
         <View key={event.$id} style={cardStyle}>
-          <View style={cardStyle}>
             <Text style={styles.cardTitle}>
               {String(event.title ?? "")}
               <Text style={{ fontSize: 14, fontWeight: "400", color: "#444" }}>
@@ -118,7 +127,6 @@ export default function HomeScreen() {
             <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
 
             <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
-          </View>
         </View>
       );
     });
@@ -280,7 +288,6 @@ export default function HomeScreen() {
                   <Text style={styles.noEvent}>
                     You have nothing booked today, Date Night?
                   </Text>
-                  <View></View>
                 </View>
               )}
             </ScrollView>

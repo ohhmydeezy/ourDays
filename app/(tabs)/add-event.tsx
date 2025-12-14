@@ -44,6 +44,7 @@ export default function AddEventScreen() {
     [connectedUser?.userId]
   );
 
+
   const handleSubmit = async () => {
     if (!user) {
       setError("Unauthenticated User");
