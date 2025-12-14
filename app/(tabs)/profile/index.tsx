@@ -1,5 +1,6 @@
 import { account } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { View, StyleSheet } from "react-native";
@@ -132,26 +133,42 @@ export default function ProfileScreen() {
         </View>
         <Button
           mode="text"
+          textColor="#000"
           onPress={() => router.push("/profile/account-details")}
-          icon={"account-circle-outline"}
+          icon={({ color, size }) => (
+            <MaterialCommunityIcons name="account-circle" color="#000" size={size} />
+          )}
         >
           Account Details
         </Button>
         <Button
           mode="text"
+          textColor="#000"
           onPress={() => router.push("/profile/change-password")}
-          icon={"lock"}
+          icon={({ color, size }) => (
+            <MaterialCommunityIcons name="lock" color="#000" size={size} />
+          )}
         >
           Change Password
         </Button>
         <Button
           mode="text"
+          textColor="#000"
           onPress={() => router.push("/profile/share-settings")}
-          icon={"share"}
+          icon={({ color, size }) => (
+            <MaterialCommunityIcons name="share" color="#000" size={size} />
+          )}
         >
           Share Settings
         </Button>
-        <Button mode="text" onPress={signOut} icon={"logout"}>
+        <Button
+          mode="text"
+          textColor="#000"
+          onPress={signOut}
+          icon={({ color, size }) => (
+            <MaterialCommunityIcons name="logout" color="#000" size={size} />
+          )}
+        >
           Sign Out
         </Button>
       </View>

@@ -182,10 +182,10 @@ const handleAuth = async () => {
               <Text style={{ color: theme.colors.error }}>{error}</Text>
             )}
 
-            <Button style={styles.button} onPress={handleAuth} mode="contained">
+            <Button textColor="#999" style={styles.button} onPress={handleAuth} mode="contained">
               {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
-            <Button style={styles.switchButton} onPress={handleSwitchMode}>
+            <Button textColor="#000" style={styles.switchButton} onPress={handleSwitchMode}>
               {isSignUp
                 ? "Already have an account? Sign In"
                 : "Don't Have an account? Register"}
