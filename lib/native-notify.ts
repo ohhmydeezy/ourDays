@@ -1,24 +1,15 @@
-import Constants from "expo-constants";
 
-const extra = Constants.expoConfig?.extra;
+export const NATIVE_NOTIFY_APP_ID = Number(
+  process.env.EXPO_PUBLIC_NATIVE_NOTIFY_APP_ID!
+);
 
-const DEFAULT_ID = 32911;
-const DEFAULT_TOKEN = "cDiPfJDgsxD1ZdqMIdQJE3";
+export const NATIVE_NOTIFY_APP_TOKEN =
+  process.env.EXPO_PUBLIC_NATIVE_NOTIFY_APP_TOKEN!;
 
-const appIdFromEnv = extra?.EXPO_PUBLIC_NATIVE_NOTIFY_APP_ID;
-export const NATIVE_NOTIFY_APP_ID: number =
-  (typeof appIdFromEnv === "string"
-    ? parseInt(appIdFromEnv, 10)
-    : appIdFromEnv) ?? DEFAULT_ID;
-
-export const NATIVE_NOTIFY_APP_TOKEN: string =
-  extra?.EXPO_PUBLIC_NATIVE_NOTIFY_APP_TOKEN ?? DEFAULT_TOKEN;
-
-if (
-  NATIVE_NOTIFY_APP_ID === DEFAULT_ID ||
-  NATIVE_NOTIFY_APP_TOKEN === DEFAULT_TOKEN
-) {
-  console.warn(
-    "Native Notify credentials are missing from Expo Config 'extra'. Using default values."
+if (!NATIVE_NOTIFY_APP_ID || !NATIVE_NOTIFY_APP_TOKEN) {
+  throw new Error(
+    "❌ Native Notify credentials missing. " +
+      "Ensure EXPO_PUBLIC_NATIVE_NOTIFY_APP_ID and " +
+      "EXPO_PUBLIC_NATIVE_NOTIFY_APP_TOKEN are set in EAS."
   );
 }

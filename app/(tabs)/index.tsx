@@ -53,15 +53,11 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // 🔑 Get the Native Notify token and save it to Appwrite
   useEffect(() => {
     // Check if the user is authenticated and we haven't already saved a token this session
     if (user?.$id && user?.prefs?.nativeNotifyToken === undefined) {
       const saveTokenToAppwrite = async () => {
         try {
-          // 1. Get the newly registered push token. We assert the type to string | null
-          // because getPushToken is expected to return the token, but the environment's types
-          // might incorrectly declare it as returning void.
           const token = (await getPushToken(
             NATIVE_NOTIFY_APP_ID,
             NATIVE_NOTIFY_APP_TOKEN
@@ -69,14 +65,12 @@ export default function HomeScreen() {
 
           if (!token) return;
 
-          // 2. Update the user's Appwrite preferences with the token
           const currentPrefs = await account.getPrefs();
           await account.updatePrefs({
             ...currentPrefs,
             nativeNotifyToken: token,
           });
 
-          // 3. Update the user's profile document in the database (for connectedUser sync)
           const userDocs = await databases.listDocuments(
             DATABASE_ID,
             USER_COLLECTION_ID,
@@ -89,12 +83,10 @@ export default function HomeScreen() {
               USER_COLLECTION_ID,
               userDocs.documents[0].$id,
               {
-                nativeNotifyToken: token, // Save the token here for partner access
+                nativeNotifyToken: token,
               }
             );
           }
-
-          // 4. Force a user context refresh to sync the new token
           await refreshUser();
           console.log("Successfully saved Native Notify token to Appwrite.");
         } catch (error) {
@@ -105,7 +97,7 @@ export default function HomeScreen() {
       saveTokenToAppwrite();
     }
   }, [refreshUser, user?.$id, user?.prefs?.nativeNotifyToken]); 
-  // ----------------------------------------------------
+
 
   const handleDeleteEvent = async (id: string) => {
     try {
