@@ -6,7 +6,7 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { client, DATABASE_ID, databases, EVENTS_ID } from "./appwrite";
+import { client, DATABASE_ID, databases, EVENTS_ID, USER_COLLECTION_ID } from "./appwrite";
 import { Query } from "appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { Events } from "@/types/database.type";
@@ -106,22 +106,33 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     }
   }, [user?.$id]);
 
-  // Centralized notification function
-  const notifyEventStatus = async (
-    recipientUserId: string,
-    eventTitle: string,
-    status: "confirmed" | "declined"
-  ) => {
-    if (!recipientUserId) return;
+const notifyEventStatus = async (
+  recipientId: string,
+  eventTitle: string,
+  status: "confirmed" | "declined"
+) => {
+  if (!recipientId) return;
 
-    try {
-      const res = await fetch("https://app.nativenotify.com/api/indie/push", {
+  try {
+    // Fetch recipient document
+    const res = await databases.listDocuments(DATABASE_ID, USER_COLLECTION_ID, [
+      Query.equal("userId", recipientId),
+    ]);
+
+    if (!res.documents.length) return;
+    const recipientDoc = res.documents[0];
+    const subID = recipientDoc.nativeNotifyToken;
+    if (!subID) return; // recipient hasn't registered for push yet
+
+    const response = await fetch(
+      "https://app.nativenotify.com/api/indie/push",
+      {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           appId: NATIVE_NOTIFY_APP_ID,
           appToken: NATIVE_NOTIFY_APP_TOKEN,
-          subID: recipientUserId,
+          subID,
           title:
             status === "confirmed" ? "Event Accepted 🎉" : "Event Declined",
           message:
@@ -129,58 +140,63 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
               ? `Your event "${eventTitle}" was accepted 🎉`
               : `Your event "${eventTitle}" was declined`,
         }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Native Notify error:", data);
       }
-    } catch (err) {
-      console.error("Push request failed:", err);
+    );
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error("Native Notify error:", data);
+    } else {
+      console.log("Push sent successfully:", data);
     }
-  };
+  } catch (err) {
+    console.error("Push request failed:", err);
+  }
+};
 
-  const handleAcceptEvent = async (event: Events) => {
-    if (!user) return;
 
-    try {
-      await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
-        status: "confirmed",
-      });
+const handleAcceptEvent = async (event: Events) => {
+  if (!user) return;
 
-      if (event.userId !== user.$id) {
-        await notifyEventStatus(event.userId, event.title, "confirmed");
-      }
+  try {
+    await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
+      status: "confirmed",
+    });
 
-      if (!isMounted.current) return;
-      await fetchPendingEvents();
-      await fetchMyEvents();
-      await fetchPartnerEvents();
-    } catch (error) {
-      console.error("Error accepting event:", error);
+    if (event.userId !== user.$id) {
+      await notifyEventStatus(event.recipientId, event.title, "confirmed");
     }
-  };
 
-  const handleDeclineEvent = async (event: Events) => {
-    if (!user) return;
+    if (!isMounted.current) return;
+    await fetchPendingEvents();
+    await fetchMyEvents();
+    await fetchPartnerEvents();
+  } catch (error) {
+    console.error("Error accepting event:", error);
+  }
+};
 
-    try {
-      await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
-        status: "declined",
-      });
+const handleDeclineEvent = async (event: Events) => {
+  if (!user) return;
 
-      if (event.userId !== user.$id) {
-        await notifyEventStatus(event.userId, event.title, "declined");
-      }
+  try {
+    await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
+      status: "declined",
+    });
 
-      if (!isMounted.current) return;
-      await fetchPendingEvents();
-      await fetchMyEvents();
-      await fetchPartnerEvents();
-    } catch (error) {
-      console.error("Error declining event:", error);
+    if (event.userId !== user.$id) {
+      await notifyEventStatus(event.recipientId, event.title, "declined");
     }
-  };
+
+    if (!isMounted.current) return;
+    await fetchPendingEvents();
+    await fetchMyEvents();
+    await fetchPartnerEvents();
+  } catch (error) {
+    console.error("Error declining event:", error);
+  }
+};
+
 
   // Initial fetch of events
   useEffect(() => {

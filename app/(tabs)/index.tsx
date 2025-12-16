@@ -4,13 +4,22 @@ import { View, StyleSheet, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ActivityIndicator, Button, Text } from "react-native-paper";
 import { Calendar } from "react-native-calendars";
-import { account, DATABASE_ID, databases, EVENTS_ID, USER_COLLECTION_ID } from "../../lib/appwrite";
+import {
+  account,
+  DATABASE_ID,
+  databases,
+  EVENTS_ID,
+  USER_COLLECTION_ID,
+} from "../../lib/appwrite";
 import { Events } from "@/types/database.type";
 import { ScrollView, Swipeable } from "react-native-gesture-handler";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEventsData } from "@/lib/events-context";
 import registerNNPushToken from "native-notify";
-import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "@/lib/native-notify";
+import {
+  NATIVE_NOTIFY_APP_ID,
+  NATIVE_NOTIFY_APP_TOKEN,
+} from "@/lib/native-notify";
 import { Query } from "react-native-appwrite";
 
 export default function HomeScreen() {
@@ -96,8 +105,7 @@ export default function HomeScreen() {
 
       saveTokenToAppwrite();
     }
-  }, [refreshUser, user?.$id, user?.prefs?.nativeNotifyToken]); 
-
+  }, [refreshUser, user?.$id, user?.prefs?.nativeNotifyToken]);
 
   const handleDeleteEvent = async (id: string) => {
     try {
@@ -144,9 +152,15 @@ export default function HomeScreen() {
                 {cardSuffix}
               </Text>
             </Text>
-
+            <Text style={styles.cardText}>
+              {event.time
+                ? new Date(event.time).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })
+                : ""}
+            </Text>
             <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
-
             <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
           </View>
         </Swipeable>
@@ -172,9 +186,15 @@ export default function HomeScreen() {
               {cardSuffix}
             </Text>
           </Text>
-
+          <Text style={styles.cardText}>
+            {event.time
+              ? new Date(event.time).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : ""}
+          </Text>
           <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
-
           <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
         </View>
       );
@@ -447,7 +467,6 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     borderWidth: 2,
     borderColor: "#fff",
-
   },
   jointCard: {
     backgroundColor: "#8873FF",
@@ -465,12 +484,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 5,
-    color: "#000"
+    color: "#000",
   },
   cardText: {
     fontSize: 14,
     marginRight: 10,
-    color: "#000"
+    color: "#000",
   },
   noEventsContainer: {
     flex: 1,
@@ -493,7 +512,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-function getPushToken(NATIVE_NOTIFY_APP_ID: number, NATIVE_NOTIFY_APP_TOKEN: string) {
+function getPushToken(
+  NATIVE_NOTIFY_APP_ID: number,
+  NATIVE_NOTIFY_APP_TOKEN: string
+) {
   throw new Error("Function not implemented.");
 }
-

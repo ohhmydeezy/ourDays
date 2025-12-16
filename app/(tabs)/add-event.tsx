@@ -1,4 +1,9 @@
-import { DATABASE_ID, databases, EVENTS_ID } from "../../lib/appwrite";
+import {
+  DATABASE_ID,
+  databases,
+  EVENTS_ID,
+  USER_COLLECTION_ID,
+} from "../../lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { useMemo, useState } from "react";
 import {
@@ -15,27 +20,28 @@ import {
   useTheme,
   Checkbox,
 } from "react-native-paper";
-import { ID } from "react-native-appwrite";
+import { ID, Query } from "react-native-appwrite";
 import { router } from "expo-router";
 import RNDateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEventsData } from "@/lib/events-context";
-import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "@/lib/native-notify";
+import {
+  NATIVE_NOTIFY_APP_ID,
+  NATIVE_NOTIFY_APP_TOKEN,
+} from "@/lib/native-notify";
 
 export default function AddEventScreen() {
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [location, setLocation] = useState("");
-  const [jointEvent, setJointEvent] = useState<boolean>(false);
-  const [date, setDate] = useState(new Date());
-  const [time, setTime] = useState("");
-  const [tempDate, setTempDate] = useState(new Date());
-  const [tempTime, setTempTime] = useState(new Date());
+  const [jointEvent, setJointEvent] = useState(false);
+  const [dateTime, setDateTime] = useState(new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
+
   const { user, connectedUser } = useAuth();
   const { fetchMyEvents, fetchPartnerEvents } = useEventsData();
   const theme = useTheme();
@@ -72,23 +78,15 @@ export default function AddEventScreen() {
       );
 
       const data = await response.json();
-
-      if (!response.ok) {
-        console.error("Native Notify error:", data);
-      } else {
-        console.log("Push sent:", data);
-      }
+      if (!response.ok) console.error("Native Notify error:", data);
+      else console.log("Push sent:", data);
     } catch (err) {
       console.error("Push request failed:", err);
     }
   };
 
   const handleSubmit = async () => {
-    if (!user) {
-      setError("Unauthenticated User");
-      return;
-    }
-
+    if (!user) return setError("Unauthenticated User");
     if (isSubmitted) return;
 
     setError("");
@@ -100,56 +98,59 @@ export default function AddEventScreen() {
       title,
       details,
       location,
-      date: date.toISOString(),
-      time,
-      jointEvent: jointEvent,
+      date: dateTime.toISOString(),
+      time: dateTime.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      jointEvent,
       status: jointEvent ? "pending" : "confirmed",
     };
 
-    if (jointEvent) {
-      if (!isPartnerAvailable || !connectedUser.userId) {
-        setError(
-          "Cannot create a joint event: You must be connected to a partner."
-        );
-        setIsSubmitted(false); 
-        return;
-      }
-      documentData.recipientId = connectedUser.userId;
-    }
-
     try {
+      // If joint event, attach recipientId and send push
+      if (jointEvent && connectedUser?.userId) {
+        documentData.recipientId = connectedUser.userId;
+
+        const res = await databases.listDocuments(
+          DATABASE_ID,
+          USER_COLLECTION_ID,
+          [Query.equal("userId", connectedUser.userId)]
+        );
+
+        if (res.documents.length) {
+          const recipientDoc = res.documents[0];
+          const subID = recipientDoc.nativeNotifyToken;
+          if (subID) {
+            await sendPushNotification(
+              subID,
+              title,
+              user.prefs?.firstName || user.email
+            );
+          }
+        }
+      }
+
       await databases.createDocument(
         DATABASE_ID,
         EVENTS_ID,
         ID.unique(),
         documentData
       );
-      await fetchMyEvents();
-      if (connectedUser?.userId) {
-        await fetchPartnerEvents();
-      }
 
-      if (jointEvent) {
-       await sendPushNotification(
-         connectedUser.userId,
-         title,
-         user.prefs?.firstName || user.email
-       );
-      }
+      await fetchMyEvents();
+      if (connectedUser?.userId) await fetchPartnerEvents();
 
       setTitle("");
       setDetails("");
       setLocation("");
-      setDate(new Date());
-      setTime("");
+      setDateTime(new Date());
       setSuccess("Event successfully created!");
       setTimeout(() => router.back(), 1000);
-    } catch (error) {
-      if (error instanceof Error) {
-        setError(error.message);
-        return;
-      }
-      setError("Error creating Event");
+    } catch (err) {
+      console.error("Error creating event:", err);
+      setError(err instanceof Error ? err.message : "Error creating Event");
     } finally {
       setIsSubmitted(false);
     }
@@ -160,29 +161,34 @@ export default function AddEventScreen() {
       <View style={styles.header}>
         <Text style={{ color: "white", padding: 12 }}>New Event</Text>
       </View>
+
       <View style={styles.formContainer}>
+        {/* Date Picker */}
         <Button textColor="#000" onPress={() => setShowDatePicker(true)}>
           Select Date
         </Button>
-        <Text style={styles.text}>{date.toDateString()}</Text>
+        <Text style={styles.text}>{dateTime.toDateString()}</Text>
         <Modal visible={showDatePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
             <RNDateTimePicker
               mode="date"
-              value={tempDate}
-              themeVariant="light"
+              value={dateTime}
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                if (selectedDate) setTempDate(selectedDate);
-              }}
+              onChange={(e, selectedDate) =>
+                selectedDate &&
+                setDateTime(
+                  (prev) =>
+                    new Date(
+                      selectedDate.getFullYear(),
+                      selectedDate.getMonth(),
+                      selectedDate.getDate(),
+                      prev.getHours(),
+                      prev.getMinutes()
+                    )
+                )
+              }
             />
-            <Button
-              textColor="#000"
-              onPress={() => {
-                setDate(tempDate);
-                setShowDatePicker(false);
-              }}
-            >
+            <Button textColor="#000" onPress={() => setShowDatePicker(false)}>
               Confirm
             </Button>
             <Button textColor="#000" onPress={() => setShowDatePicker(false)}>
@@ -191,34 +197,38 @@ export default function AddEventScreen() {
           </View>
         </Modal>
 
+        {/* Time Picker */}
         <Button textColor="#000" onPress={() => setShowTimePicker(true)}>
           Select Time
         </Button>
-        <Text style={styles.text}>{time}</Text>
+        <Text style={styles.text}>
+          {dateTime.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+          })}
+        </Text>
         <Modal visible={showTimePicker} transparent animationType="slide">
           <View style={styles.pickerContainer}>
             <RNDateTimePicker
               mode="time"
-              value={tempTime}
-              themeVariant="light"
+              value={dateTime}
               display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(event, selectedDate) => {
-                if (selectedDate) setTempTime(selectedDate);
-              }}
+              onChange={(e, selectedDate) =>
+                selectedDate &&
+                setDateTime(
+                  (prev) =>
+                    new Date(
+                      prev.getFullYear(),
+                      prev.getMonth(),
+                      prev.getDate(),
+                      selectedDate.getHours(),
+                      selectedDate.getMinutes()
+                    )
+                )
+              }
             />
-            <Button
-              textColor="#000"
-              onPress={() => {
-                setTime(
-                  tempTime.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    hour12: true,
-                  })
-                );
-                setShowTimePicker(false);
-              }}
-            >
+            <Button textColor="#000" onPress={() => setShowTimePicker(false)}>
               Confirm
             </Button>
             <Button textColor="#000" onPress={() => setShowTimePicker(false)}>
@@ -227,6 +237,7 @@ export default function AddEventScreen() {
           </View>
         </Modal>
 
+        {/* Inputs */}
         <TextInput
           label="Title"
           textColor="#000"
@@ -235,7 +246,6 @@ export default function AddEventScreen() {
           onChangeText={setTitle}
           style={styles.input}
         />
-
         <TextInput
           label="Location"
           textColor="#000"
@@ -244,7 +254,6 @@ export default function AddEventScreen() {
           onChangeText={setLocation}
           style={styles.input}
         />
-
         <TextInput
           label="Details"
           textColor="#000"
@@ -253,6 +262,8 @@ export default function AddEventScreen() {
           onChangeText={setDetails}
           style={styles.input}
         />
+
+        {/* Joint Event Checkbox */}
         <View
           style={{
             flexDirection: "row",
@@ -263,7 +274,6 @@ export default function AddEventScreen() {
           <Text style={{ margin: 24, fontWeight: "bold", color: "#000" }}>
             Is this time with your partner?
           </Text>
-
           <TouchableOpacity
             style={styles.checkbox}
             onPress={() => setJointEvent(!jointEvent)}
@@ -279,10 +289,11 @@ export default function AddEventScreen() {
           </TouchableOpacity>
         </View>
 
+        {/* Submit Button */}
         <Button
           mode="contained"
           onPress={handleSubmit}
-          disabled={!title || !date || !time}
+          disabled={!title}
           style={{ marginTop: 24 }}
         >
           Create
@@ -360,8 +371,5 @@ const styles = StyleSheet.create({
     padding: 8,
     color: "#999",
   },
-  text: {
-    color: "#000",
-    fontWeight: "bold"
-  }
+  text: { color: "#000", fontWeight: "bold" },
 });

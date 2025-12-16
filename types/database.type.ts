@@ -9,6 +9,7 @@ export interface Events extends Models.Document {
     location: string
     details: string
     status: string
+    recipientId: string
 }
 
 export interface UserPrefs {
