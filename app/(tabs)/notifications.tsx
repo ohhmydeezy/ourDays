@@ -6,12 +6,10 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
-  RefreshControl,
 } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useState, useCallback } from "react";
 
 export default function NotificationsScreen() {
   const {
@@ -21,13 +19,7 @@ export default function NotificationsScreen() {
     handleDeclineEvent,
     fetchPendingEvents,
   } = useEventsData();
-  const [refreshing, setRefreshing] = useState(false);
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await fetchPendingEvents?.();
-    setRefreshing(false);
-  }, [fetchPendingEvents]);
 
   const renderPendingEvent = ({ item: event }: { item: Events }) => (
     <Swipeable
@@ -96,9 +88,8 @@ export default function NotificationsScreen() {
             keyExtractor={(item) => item.$id}
             renderItem={renderPendingEvent}
             contentContainerStyle={{ paddingBottom: 20 }}
-            refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-            }
+            refreshing={isLoading}
+            onRefresh={() => fetchPendingEvents()}
           />
         )}
       </View>
@@ -144,9 +135,9 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     fontSize: 16,
     marginBottom: 4,
-    color: "#fff",
+    color: "#000",
   },
-  cardText: { fontSize: 14, marginRight: 10, color: "#fff" },
+  cardText: { fontSize: 14, marginRight: 10, color: "#000f" },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",

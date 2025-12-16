@@ -219,11 +219,8 @@ const handleDeclineEvent = async (event: Events) => {
       const payload = response.payload as any;
       if (!payload) return;
 
-    const isRelevant =
-      payload?.userId === user.$id ||
-      payload?.recipientId === user.$id ||
-      payload?.userId === connectedUser?.userId ||
-      payload?.recipientId === connectedUser?.userId;
+   const isRelevant =
+     payload?.userId === user.$id || payload?.recipientId === user.$id;
 
       if (
         isRelevant &&
