@@ -2,6 +2,7 @@ import { Redirect, Tabs, useSegments } from "expo-router";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAuth } from "@/lib/auth-context";
 import { View } from "react-native";
+import { useEventsData } from "@/lib/events-context";
 
 export default function TabsLayout() {
   const { user, isLoadingUser } = useAuth();
@@ -133,24 +134,48 @@ export default function TabsLayout() {
         name="notifications"
         options={{
           title: "Notifications",
-          tabBarIcon: ({ focused, color, size }) => (
-            <View style={{ alignItems: "center" }}>
-              <MaterialCommunityIcons name="bell" size={size} color={color} />
-              {focused && (
-                <View
-                  style={{
-                    marginTop: 4,
-                    height: 3,
-                    width: 20,
-                    backgroundColor: "#000",
-                    borderRadius: 2,
-                  }}
-                />
-              )}
-            </View>
-          ),
+          tabBarIcon: ({ focused, color, size }) => {
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            const { pendingEvents } = useEventsData();
+            const hasNotifications = pendingEvents.length > 0;
+
+            return (
+              <View style={{ alignItems: "center" }}>
+                <MaterialCommunityIcons name="bell" size={size} color={color} />
+
+                {/* small red dot */}
+                {hasNotifications && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      right: -6, // adjust to position dot
+                      width: 10,
+                      height: 10,
+                      borderRadius: 5,
+                      backgroundColor: "red",
+                    }}
+                  />
+                )}
+
+                {/* underline when focused */}
+                {focused && (
+                  <View
+                    style={{
+                      marginTop: 4,
+                      height: 3,
+                      width: 20,
+                      backgroundColor: "#000",
+                      borderRadius: 2,
+                    }}
+                  />
+                )}
+              </View>
+            );
+          },
         }}
       />
+
       <Tabs.Screen
         name="concierge"
         options={{
