@@ -12,6 +12,9 @@ import {
   Platform,
   Modal,
   TouchableOpacity,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
 import {
   Button,
@@ -29,6 +32,7 @@ import {
   NATIVE_NOTIFY_APP_ID,
   NATIVE_NOTIFY_APP_TOKEN,
 } from "@/lib/native-notify";
+import { ScrollView } from "react-native-gesture-handler";
 
 export default function AddEventScreen() {
   const [title, setTitle] = useState("");
@@ -51,39 +55,49 @@ export default function AddEventScreen() {
     [connectedUser?.userId]
   );
 
-  const sendPushNotification = async (
-    recipientSubId: string,
-    eventTitle: string,
-    senderName: string
-  ) => {
-    try {
-      const response = await fetch(
-        "https://app.nativenotify.com/api/indie/push",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appId: NATIVE_NOTIFY_APP_ID,
-            appToken: NATIVE_NOTIFY_APP_TOKEN,
-            subID: recipientSubId,
-            title: "You Have An Invite!",
-            message: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
-            data: {
-              type: "joint_event_invite",
-              eventTitle,
-              sender: senderName,
-            },
-          }),
-        }
-      );
+const sendPushNotification = async (
+  recipientSubId: string,
+  eventTitle: string,
+  senderName: string
+) => {
+  try {
+    const response = await fetch(
+      "https://app.nativenotify.com/api/indie/notification",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          appId: NATIVE_NOTIFY_APP_ID,
+          appToken: NATIVE_NOTIFY_APP_TOKEN,
+          subID: recipientSubId,
+          title: "You Have An Invite!",
+          message: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
+        }),
+      }
+    );
 
-      const data = await response.json();
-      if (!response.ok) console.error("Native Notify error:", data);
-      else console.log("Push sent:", data);
-    } catch (err) {
-      console.error("Push request failed:", err);
+    const text = await response.text();
+    console.log("Native Notify response (text):", text);
+
+    if (!response.ok) {
+      console.error("Native Notify error:", response.status, text);
+      return;
     }
-  };
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = text;
+    }
+
+    console.log("Push sent:", data);
+  } catch (err) {
+    console.error("Push request failed:", err);
+  }
+};
+
+
 
   const handleSubmit = async () => {
     if (!user) return setError("Unauthenticated User");
@@ -158,171 +172,197 @@ export default function AddEventScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
-      <View style={styles.header}>
-        <Text style={{ color: "white", padding: 12 }}>New Event</Text>
-      </View>
-
-      <View style={styles.formContainer}>
-        {/* Date Picker */}
-        <Button textColor="#000" onPress={() => setShowDatePicker(true)}>
-          Select Date
-        </Button>
-        <Text style={styles.text}>{dateTime.toDateString()}</Text>
-        <Modal visible={showDatePicker} transparent animationType="slide">
-          <View style={styles.pickerContainer}>
-            <RNDateTimePicker
-              mode="date"
-              value={dateTime}
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, selectedDate) =>
-                selectedDate &&
-                setDateTime(
-                  (prev) =>
-                    new Date(
-                      selectedDate.getFullYear(),
-                      selectedDate.getMonth(),
-                      selectedDate.getDate(),
-                      prev.getHours(),
-                      prev.getMinutes()
-                    )
-                )
-              }
-            />
-            <Button textColor="#000" onPress={() => setShowDatePicker(false)}>
-              Confirm
-            </Button>
-            <Button textColor="#000" onPress={() => setShowDatePicker(false)}>
-              Cancel
-            </Button>
-          </View>
-        </Modal>
-
-        {/* Time Picker */}
-        <Button textColor="#000" onPress={() => setShowTimePicker(true)}>
-          Select Time
-        </Button>
-        <Text style={styles.text}>
-          {dateTime.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          })}
-        </Text>
-        <Modal visible={showTimePicker} transparent animationType="slide">
-          <View style={styles.pickerContainer}>
-            <RNDateTimePicker
-              mode="time"
-              value={dateTime}
-              display={Platform.OS === "ios" ? "spinner" : "default"}
-              onChange={(e, selectedDate) =>
-                selectedDate &&
-                setDateTime(
-                  (prev) =>
-                    new Date(
-                      prev.getFullYear(),
-                      prev.getMonth(),
-                      prev.getDate(),
-                      selectedDate.getHours(),
-                      selectedDate.getMinutes()
-                    )
-                )
-              }
-            />
-            <Button textColor="#000" onPress={() => setShowTimePicker(false)}>
-              Confirm
-            </Button>
-            <Button textColor="#000" onPress={() => setShowTimePicker(false)}>
-              Cancel
-            </Button>
-          </View>
-        </Modal>
-
-        {/* Inputs */}
-        <TextInput
-          label="Title"
-          textColor="#000"
-          mode="flat"
-          value={title}
-          onChangeText={setTitle}
-          style={styles.input}
-        />
-        <TextInput
-          label="Location"
-          textColor="#000"
-          mode="flat"
-          value={location}
-          onChangeText={setLocation}
-          style={styles.input}
-        />
-        <TextInput
-          label="Details"
-          textColor="#000"
-          mode="flat"
-          value={details}
-          onChangeText={setDetails}
-          style={styles.input}
-        />
-
-        {/* Joint Event Checkbox */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Text style={{ margin: 24, fontWeight: "bold", color: "#000" }}>
-            Is this time with your partner?
-          </Text>
-          <TouchableOpacity
-            style={styles.checkbox}
-            onPress={() => setJointEvent(!jointEvent)}
-            disabled={!isPartnerAvailable}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsHorizontalScrollIndicator={false}
           >
-            <Checkbox
-              status={jointEvent ? "checked" : "unchecked"}
-              onPress={() => setJointEvent(!jointEvent)}
-              color="#6200ee"
-              uncheckedColor="#999"
-              disabled={!isPartnerAvailable}
-            />
-          </TouchableOpacity>
-        </View>
+            <View style={styles.header}>
+              <Text style={{ color: "white", padding: 12 }}>New Event</Text>
+            </View>
 
-        {/* Submit Button */}
-        <Button
-          mode="contained"
-          onPress={handleSubmit}
-          disabled={!title}
-          style={{ marginTop: 24 }}
-        >
-          Create
-        </Button>
+            <View style={styles.formContainer}>
+              {/* Date Picker */}
+              <Button textColor="#000" onPress={() => setShowDatePicker(true)}>
+                Select Date
+              </Button>
+              <Text style={styles.text}>{dateTime.toDateString()}</Text>
+              <Modal visible={showDatePicker} transparent animationType="slide">
+                <View style={styles.pickerContainer}>
+                  <RNDateTimePicker
+                    mode="date"
+                    value={dateTime}
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={(e, selectedDate) =>
+                      selectedDate &&
+                      setDateTime(
+                        (prev) =>
+                          new Date(
+                            selectedDate.getFullYear(),
+                            selectedDate.getMonth(),
+                            selectedDate.getDate(),
+                            prev.getHours(),
+                            prev.getMinutes()
+                          )
+                      )
+                    }
+                  />
+                  <Button
+                    textColor="#000"
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    textColor="#000"
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    Cancel
+                  </Button>
+                </View>
+              </Modal>
 
-        {error && (
-          <Text
-            style={{
-              color: theme.colors.error,
-              fontWeight: "bold",
-              marginTop: 12,
-            }}
-          >
-            {error}
-          </Text>
-        )}
-        {success && (
-          <Text
-            style={{
-              color: theme.colors.primary,
-              marginTop: 12,
-              fontWeight: "bold",
-              textAlign: "center",
-            }}
-          >
-            {success}
-          </Text>
-        )}
-      </View>
+              {/* Time Picker */}
+              <Button textColor="#000" onPress={() => setShowTimePicker(true)}>
+                Select Time
+              </Button>
+              <Text style={styles.text}>
+                {dateTime.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  hour12: true,
+                })}
+              </Text>
+              <Modal visible={showTimePicker} transparent animationType="slide">
+                <View style={styles.pickerContainer}>
+                  <RNDateTimePicker
+                    mode="time"
+                    value={dateTime}
+                    display={Platform.OS === "ios" ? "spinner" : "default"}
+                    onChange={(e, selectedDate) =>
+                      selectedDate &&
+                      setDateTime(
+                        (prev) =>
+                          new Date(
+                            prev.getFullYear(),
+                            prev.getMonth(),
+                            prev.getDate(),
+                            selectedDate.getHours(),
+                            selectedDate.getMinutes()
+                          )
+                      )
+                    }
+                  />
+                  <Button
+                    textColor="#000"
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    Confirm
+                  </Button>
+                  <Button
+                    textColor="#000"
+                    onPress={() => setShowTimePicker(false)}
+                  >
+                    Cancel
+                  </Button>
+                </View>
+              </Modal>
+
+              {/* Inputs */}
+              <TextInput
+                label="Title"
+                textColor="#000"
+                mode="flat"
+                value={title}
+                onChangeText={setTitle}
+                style={styles.input}
+              />
+              <TextInput
+                label="Location"
+                textColor="#000"
+                mode="flat"
+                value={location}
+                onChangeText={setLocation}
+                style={styles.input}
+              />
+              <TextInput
+                label="Details"
+                textColor="#000"
+                mode="flat"
+                value={details}
+                onChangeText={setDetails}
+                style={styles.input}
+              />
+
+              {/* Joint Event Checkbox */}
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Text style={{ margin: 24, fontWeight: "bold", color: "#000" }}>
+                  Is this time with your partner?
+                </Text>
+                <TouchableOpacity
+                  style={styles.checkbox}
+                  onPress={() => setJointEvent(!jointEvent)}
+                  disabled={!isPartnerAvailable}
+                >
+                  <Checkbox
+                    status={jointEvent ? "checked" : "unchecked"}
+                    onPress={() => setJointEvent(!jointEvent)}
+                    color="#6200ee"
+                    uncheckedColor="#999"
+                    disabled={!isPartnerAvailable}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Submit Button */}
+              <Button
+                mode="contained"
+                onPress={handleSubmit}
+                disabled={!title}
+                style={{ marginTop: 24 }}
+              >
+                Create
+              </Button>
+
+              {error && (
+                <Text
+                  style={{
+                    color: theme.colors.error,
+                    fontWeight: "bold",
+                    marginTop: 12,
+                  }}
+                >
+                  {error}
+                </Text>
+              )}
+              {success && (
+                <Text
+                  style={{
+                    color: theme.colors.primary,
+                    marginTop: 12,
+                    fontWeight: "bold",
+                    textAlign: "center",
+                  }}
+                >
+                  {success}
+                </Text>
+              )}
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -371,5 +411,7 @@ const styles = StyleSheet.create({
     padding: 8,
     color: "#999",
   },
-  text: { color: "#000", fontWeight: "bold" },
+  text: { 
+    color: "#000", 
+    fontWeight: "bold" },
 });

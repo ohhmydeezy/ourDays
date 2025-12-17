@@ -6,7 +6,7 @@ import {
   EVENTS_ID,
 } from "@/lib/appwrite";
 import { useEffect, useMemo, useRef, useState } from "react"
-import { View, StyleSheet, TextInput, TouchableOpacity } from "react-native";
+import { View, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
 import { Events } from "@/types/database.type";
 import {  Query } from "react-native-appwrite";
 import { Text, ActivityIndicator } from "react-native-paper";
@@ -229,65 +229,85 @@ const payload = {
 
   return (
     <SafeAreaView edges={["bottom"]} style={conciergeStyles.container}>
-      <Text style={conciergeStyles.header}>Dory&apos;s Concierge Service</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsHorizontalScrollIndicator={false}
+          >
+            <Text style={conciergeStyles.header}>
+              Dory&apos;s Concierge Service
+            </Text>
 
-      <View style={conciergeStyles.chatWindow}>
-        <ScrollView
-          ref={chatScrollViewRef}
-          style={conciergeStyles.chatMessages}
-          contentContainerStyle={{ paddingVertical: 10 }}
-        >
-          {messages.map((msg, index) => (
-            <View
-              key={index}
-              style={[
-                conciergeStyles.messageBubble,
-                msg.role === "user"
-                  ? conciergeStyles.userBubble
-                  : conciergeStyles.conciergeBubble,
-              ]}
-            >
-              <Text
-                style={[
-                  conciergeStyles.messageText,
-                  msg.role === "user"
-                    ? conciergeStyles.userText
-                    : conciergeStyles.conciergeText,
-                ]}
+            <View style={conciergeStyles.chatWindow}>
+              <ScrollView
+                ref={chatScrollViewRef}
+                style={conciergeStyles.chatMessages}
+                contentContainerStyle={{ paddingVertical: 10 }}
               >
-                {msg.text}
-              </Text>
+                {messages.map((msg, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      conciergeStyles.messageBubble,
+                      msg.role === "user"
+                        ? conciergeStyles.userBubble
+                        : conciergeStyles.conciergeBubble,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        conciergeStyles.messageText,
+                        msg.role === "user"
+                          ? conciergeStyles.userText
+                          : conciergeStyles.conciergeText,
+                      ]}
+                    >
+                      {msg.text}
+                    </Text>
+                  </View>
+                ))}
+                {isTyping && (
+                  <View style={conciergeStyles.conciergeBubble}>
+                    <ActivityIndicator
+                      animating={true}
+                      color="#444"
+                      size="small"
+                    />
+                  </View>
+                )}
+              </ScrollView>
             </View>
-          ))}
-          {isTyping && (
-            <View style={conciergeStyles.conciergeBubble}>
-              <ActivityIndicator animating={true} color="#444" size="small" />
-            </View>
-          )}
-        </ScrollView>
-      </View>
 
-      <View style={conciergeStyles.chatInputContainer}>
-        <TextInput
-          style={conciergeStyles.chatInput}
-          value={userInput}
-          onChangeText={setUserInput}
-          placeholder="Ask Dory for a date idea or when you're free..."
-          placeholderTextColor="#666"
-          editable={!isTyping}
-          onSubmitEditing={handleSendMessage} // Allows sending via keyboard enter
-        />
-        <TouchableOpacity
-          style={conciergeStyles.sendButton}
-          onPress={handleSendMessage}
-          disabled={!userInput.trim() || isTyping}
-        >
-          <MaterialCommunityIcons name="send" size={24} color="#fff" />
-        </TouchableOpacity>
-      </View>
-      <Text style={conciergeStyles.statusText}>
-        Last joint event was {timeSinceLastJointEvent} days ago.
-      </Text>
+            <View style={conciergeStyles.chatInputContainer}>
+              <TextInput
+                style={conciergeStyles.chatInput}
+                value={userInput}
+                onChangeText={setUserInput}
+                placeholder="Ask Dory for a date idea or when you're free..."
+                placeholderTextColor="#666"
+                editable={!isTyping}
+                onSubmitEditing={handleSendMessage} // Allows sending via keyboard enter
+              />
+              <TouchableOpacity
+                style={conciergeStyles.sendButton}
+                onPress={handleSendMessage}
+                disabled={!userInput.trim() || isTyping}
+              >
+                <MaterialCommunityIcons name="send" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <Text style={conciergeStyles.statusText}>
+              Last joint event was {timeSinceLastJointEvent} days ago.
+            </Text>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

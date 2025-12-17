@@ -21,8 +21,10 @@ import {
   NATIVE_NOTIFY_APP_TOKEN,
 } from "@/lib/native-notify";
 import { Query } from "react-native-appwrite";
-
-export default function HomeScreen() {
+import * as Notifications from "expo-notifications";
+  import * as Device from "expo-device";
+  
+  export default function HomeScreen() {
   registerNNPushToken(NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN);
   const { user, connectedUser, refreshUser } = useAuth();
   const [isCalenderView, setCalenderView] = useState<boolean>(false);
@@ -54,6 +56,10 @@ export default function HomeScreen() {
     }
   }, [fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
+  
+
+
+
   const isMounted = useRef(true);
 
   useEffect(() => {
@@ -62,50 +68,50 @@ export default function HomeScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    // Check if the user is authenticated and we haven't already saved a token this session
-    if (user?.$id && user?.prefs?.nativeNotifyToken === undefined) {
-      const saveTokenToAppwrite = async () => {
-        try {
-          const token = (await getPushToken(
-            NATIVE_NOTIFY_APP_ID,
-            NATIVE_NOTIFY_APP_TOKEN
-          )) as string | undefined | null;
+useEffect(() => {
+  if (!user?.$id || user?.prefs?.nativeNotifyToken) return;
 
-          if (!token) return;
+  const saveTokenToAppwrite = async () => {
+    try {
+      const token = await getPushToken(
+        NATIVE_NOTIFY_APP_ID,
+        NATIVE_NOTIFY_APP_TOKEN
+      );
 
-          const currentPrefs = await account.getPrefs();
-          await account.updatePrefs({
-            ...currentPrefs,
-            nativeNotifyToken: token,
-          });
+      if (!token) return; // ✅ now safe
 
-          const userDocs = await databases.listDocuments(
-            DATABASE_ID,
-            USER_COLLECTION_ID,
-            [Query.equal("userId", user.$id)]
-          );
+      const currentPrefs = await account.getPrefs();
+      await account.updatePrefs({
+        ...currentPrefs,
+        nativeNotifyToken: token,
+      });
 
-          if (userDocs.documents.length > 0) {
-            await databases.updateDocument(
-              DATABASE_ID,
-              USER_COLLECTION_ID,
-              userDocs.documents[0].$id,
-              {
-                nativeNotifyToken: token,
-              }
-            );
-          }
-          await refreshUser();
-          console.log("Successfully saved Native Notify token to Appwrite.");
-        } catch (error) {
-          console.error("Error saving push token to Appwrite:", error);
-        }
-      };
+      const userDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        [Query.equal("userId", user.$id)]
+      );
 
-      saveTokenToAppwrite();
+      if (userDocs.documents.length > 0) {
+        await databases.updateDocument(
+          DATABASE_ID,
+          USER_COLLECTION_ID,
+          userDocs.documents[0].$id,
+          { nativeNotifyToken: token }
+        );
+      }
+
+      await refreshUser();
+      console.log("Successfully saved Native Notify token to Appwrite.");
+    } catch (err) {
+      console.error("Error saving push token:", err);
     }
-  }, [refreshUser, user?.$id, user?.prefs?.nativeNotifyToken]);
+  };
+
+  saveTokenToAppwrite();
+}, [user?.$id, user?.prefs?.nativeNotifyToken, refreshUser]);
+
+
 
   const handleDeleteEvent = async (id: string) => {
     try {
@@ -185,14 +191,6 @@ export default function HomeScreen() {
               {" "}
               {cardSuffix}
             </Text>
-          </Text>
-          <Text style={styles.cardText}>
-            {event.time
-              ? new Date(event.time).toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                })
-              : ""}
           </Text>
           <Text style={styles.cardText}>{String(event.location ?? "")}</Text>
           <Text style={styles.cardText}>{String(event.details ?? "")}</Text>
@@ -512,9 +510,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-function getPushToken(
-  NATIVE_NOTIFY_APP_ID: number,
-  NATIVE_NOTIFY_APP_TOKEN: string
-) {
-  throw new Error("Function not implemented.");
-}
+
+  export async function getPushToken(
+    NATIVE_NOTIFY_APP_ID: number,
+    NATIVE_NOTIFY_APP_TOKEN: string
+  ): Promise<string | undefined> {
+    if (!Device.isDevice) {
+      console.warn("Push notifications only work on a physical device.");
+      return;
+    }
+
+    const { status: existingStatus } =
+      await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+
+    if (existingStatus !== "granted") {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+
+    if (finalStatus !== "granted") {
+      console.warn("Failed to get push token permissions!");
+      return;
+    }
+
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    return tokenData.data; // This is the string token
+  }
