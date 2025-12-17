@@ -33,7 +33,7 @@ type AuthContextType = {
     surname: string
   ) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
-  signOut: () => Promise<void>;
+  signOut: (navigation?: any) => Promise<void>;
   refreshUser: () => Promise<void>;
   linkAccount: (shareCode: string) => Promise<string | null>;
   unlinkAccount: (partnerUserId: string) => Promise<string | null>;
@@ -418,9 +418,15 @@ useEffect(() => {
     }
   };
 
-  const signOut = async () => {
+  const signOut = async (navigation?: any) => {
     try {
       await account.deleteSession("current");
+
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Login" }],
+      });
+
       setUser(null);
       setConnectedUser(null);
     } catch (error) {
