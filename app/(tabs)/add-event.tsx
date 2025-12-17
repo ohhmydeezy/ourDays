@@ -199,6 +199,7 @@ const sendPushNotification = async (
                     mode="date"
                     value={dateTime}
                     display={Platform.OS === "ios" ? "spinner" : "default"}
+                    themeVariant="light"
                     onChange={(e, selectedDate) =>
                       selectedDate &&
                       setDateTime(
@@ -244,6 +245,7 @@ const sendPushNotification = async (
                   <RNDateTimePicker
                     mode="time"
                     value={dateTime}
+                    themeVariant="light"
                     display={Platform.OS === "ios" ? "spinner" : "default"}
                     onChange={(e, selectedDate) =>
                       selectedDate &&
