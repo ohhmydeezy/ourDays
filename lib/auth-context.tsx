@@ -173,50 +173,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    if (!user?.$id) return;
 
-useEffect(() => {
-  if (!user?.$id) return;
-
-  const registerPush = async () => {
-    try {
-      // Get the user's document
-      const userDocs = await databases.listDocuments(
-        DATABASE_ID,
-        USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
-      );
-      if (!userDocs.documents.length) return;
-
-      const userDoc = userDocs.documents[0];
-
-      // Only register if token is missing
-      if (!userDoc.nativeNotifyToken) {
-        const token = await getPushToken();
-        if (!token) return;
-
-        NativeNotify.registerIndieID(
-          user.$id,
-          NATIVE_NOTIFY_APP_ID,
-          NATIVE_NOTIFY_APP_TOKEN
-        );
-
-        await databases.updateDocument(
+    const registerPush = async () => {
+      try {
+        // Get the user's document
+        const userDocs = await databases.listDocuments(
           DATABASE_ID,
           USER_COLLECTION_ID,
-          userDoc.$id,
-          { nativeNotifyToken: token }
+          [Query.equal("userId", user.$id)]
         );
+        if (!userDocs.documents.length) return;
 
-        console.log("✅ Native Notify registered for:", user.$id);
+        const userDoc = userDocs.documents[0];
+
+        // Only register if token is missing
+        if (!userDoc.nativeNotifyToken) {
+          const token = await getPushToken();
+          if (!token) return;
+
+          NativeNotify.registerIndieID(
+            user.$id,
+            NATIVE_NOTIFY_APP_ID,
+            NATIVE_NOTIFY_APP_TOKEN
+          );
+
+          await databases.updateDocument(
+            DATABASE_ID,
+            USER_COLLECTION_ID,
+            userDoc.$id,
+            { nativeNotifyToken: token }
+          );
+
+          console.log("✅ Native Notify registered for:", user.$id);
+        }
+      } catch (err) {
+        console.warn("⚠️ Native Notify registration failed:", err);
       }
-    } catch (err) {
-      console.warn("⚠️ Native Notify registration failed:", err);
-    }
-  };
+    };
 
-  registerPush();
-}, [user?.$id]);
-
+    registerPush();
+  }, [user?.$id]);
 
   const refreshUser = async () => {
     try {
@@ -418,15 +416,9 @@ useEffect(() => {
     }
   };
 
-  const signOut = async (navigation?: any) => {
+  const signOut = async () => {
     try {
       await account.deleteSession("current");
-
-      navigation.reset({
-        index: 0,
-        routes: [{ name: "Login" }],
-      });
-
       setUser(null);
       setConnectedUser(null);
     } catch (error) {
