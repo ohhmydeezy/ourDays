@@ -149,7 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const getPushToken = async (): Promise<string | null> => {
     try {
-      // Ask for permissions first
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
@@ -230,6 +229,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
+
+  // Connect users
+
   const linkAccount = async (shareCode: string): Promise<string | null> => {
     if (!shareCode) return "Share code is required";
 
@@ -296,6 +298,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Remove user connection
+
   const unlinkAccount = async (
     partnerUserId: string
   ): Promise<string | null> => {
@@ -360,6 +364,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Sign In function
+
   const signIn = async (email: string, password: string) => {
     try {
       await account.createEmailPasswordSession(email, password);
@@ -373,6 +379,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return "An Error occured during Sign In";
     }
   };
+
+  //Sign Up function
 
   const signUp = async (
     email: string,
@@ -416,6 +424,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  //Sign Out function
+  
   const signOut = async () => {
     try {
       await account.deleteSession("current");
@@ -425,6 +435,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log(error);
     }
   };
+
+
 
   return (
     <AuthContext.Provider

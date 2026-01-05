@@ -55,6 +55,8 @@ export default function AddEventScreen() {
     [connectedUser?.userId]
   );
 
+  //NativeNotfiy API implementation
+
 const sendPushNotification = async (
   recipientSubId: string,
   eventTitle: string,

@@ -7,6 +7,7 @@ import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 export default function RootLayout() {
+  // Only navigate to home if user is loaded
   function AuthGate() {
     const { isLoadingUser, user } = useAuth();
     const segments = useSegments();
