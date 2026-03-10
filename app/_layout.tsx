@@ -1,17 +1,20 @@
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { EventsDataProvider } from "@/lib/events-context";
 import { Slot, useRouter, useSegments } from "expo-router";
+import { usePushNotifications } from "@/app/hooks/usePushNotifications"
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
-export default function RootLayout() {
-  // Only navigate to home if user is loaded
+
+
   function AuthGate() {
     const { isLoadingUser, user } = useAuth();
     const segments = useSegments();
     const router = useRouter()
+   usePushNotifications()
+
 
       useEffect(() => {
         if (isLoadingUser) return;
@@ -35,6 +38,7 @@ export default function RootLayout() {
     return <Slot />;
   }
   
+export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
@@ -49,3 +53,4 @@ export default function RootLayout() {
     </GestureHandlerRootView>
   );
 }
+

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "624311751431",
+    "project_id": "ourdays-35633",
+    "storage_bucket": "ourdays-35633.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:624311751431:android:2d2ff7bb467797e694aba2",
+        "android_client_info": {
+          "package_name": "com.dylan.gunda.ourDays"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAvmzZMWZ7rkBjGlyTZ8gxfSUe_PouYDJw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

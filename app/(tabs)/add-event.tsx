@@ -2,7 +2,6 @@ import {
   DATABASE_ID,
   databases,
   EVENTS_ID,
-  USER_COLLECTION_ID,
 } from "../../lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { useMemo, useState } from "react";
@@ -23,15 +22,11 @@ import {
   useTheme,
   Checkbox,
 } from "react-native-paper";
-import { ID, Query } from "react-native-appwrite";
+import { ID } from "react-native-appwrite";
 import { router } from "expo-router";
 import RNDateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEventsData } from "@/lib/events-context";
-import {
-  NATIVE_NOTIFY_APP_ID,
-  NATIVE_NOTIFY_APP_TOKEN,
-} from "@/lib/native-notify";
 import { ScrollView } from "react-native-gesture-handler";
 
 export default function AddEventScreen() {
@@ -47,7 +42,7 @@ export default function AddEventScreen() {
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const { user, connectedUser } = useAuth();
-  const { fetchMyEvents, fetchPartnerEvents } = useEventsData();
+  const { fetchMyEvents, fetchPartnerEvents, notifyEventCreated } = useEventsData();
   const theme = useTheme();
 
   const isPartnerAvailable = useMemo(
@@ -55,122 +50,60 @@ export default function AddEventScreen() {
     [connectedUser?.userId]
   );
 
-  //NativeNotfiy API implementation
 
-const sendPushNotification = async (
-  recipientSubId: string,
-  eventTitle: string,
-  senderName: string
-) => {
+
+const handleSubmit = async () => {
+  if (!user) return setError("Unauthenticated User");
+  if (isSubmitted) return;
+
+  setError("");
+  setSuccess("");
+  setIsSubmitted(true);
+
+  const documentData: any = {
+    userId: user.$id,
+    title,
+    details,
+    location,
+    date: dateTime.toISOString(),
+    time: dateTime.toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
+    jointEvent,
+    status: jointEvent ? "pending" : "confirmed",
+  };
+
   try {
-    const response = await fetch(
-      "https://app.nativenotify.com/api/indie/notification",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          appId: NATIVE_NOTIFY_APP_ID,
-          appToken: NATIVE_NOTIFY_APP_TOKEN,
-          subID: recipientSubId,
-          title: "You Have An Invite!",
-          message: `${senderName} invited you to: ${eventTitle}. Status: Pending.`,
-        }),
-      }
+    if (jointEvent && connectedUser?.userId) {
+      documentData.recipientId = connectedUser.userId;
+      await notifyEventCreated(connectedUser.userId, title);
+    }
+
+    await databases.createDocument(
+      DATABASE_ID,
+      EVENTS_ID,
+      ID.unique(),
+      documentData,
     );
 
-    const text = await response.text();
-    console.log("Native Notify response (text):", text);
+    await fetchMyEvents();
+    if (connectedUser?.userId) await fetchPartnerEvents();
 
-    if (!response.ok) {
-      console.error("Native Notify error:", response.status, text);
-      return;
-    }
-
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch {
-      data = text;
-    }
-
-    console.log("Push sent:", data);
+    setTitle("");
+    setDetails("");
+    setLocation("");
+    setDateTime(new Date());
+    setSuccess("Event successfully created!");
+    setTimeout(() => router.back(), 1000);
   } catch (err) {
-    console.error("Push request failed:", err);
+    console.error("Error creating event:", err);
+    setError(err instanceof Error ? err.message : "Error creating Event");
+  } finally {
+    setIsSubmitted(false);
   }
 };
-
-
-
-  const handleSubmit = async () => {
-    if (!user) return setError("Unauthenticated User");
-    if (isSubmitted) return;
-
-    setError("");
-    setSuccess("");
-    setIsSubmitted(true);
-
-    const documentData: any = {
-      userId: user.$id,
-      title,
-      details,
-      location,
-      date: dateTime.toISOString(),
-      time: dateTime.toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      }),
-      jointEvent,
-      status: jointEvent ? "pending" : "confirmed",
-    };
-
-    try {
-      // If joint event, attach recipientId and send push
-      if (jointEvent && connectedUser?.userId) {
-        documentData.recipientId = connectedUser.userId;
-
-        const res = await databases.listDocuments(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          [Query.equal("userId", connectedUser.userId)]
-        );
-
-        if (res.documents.length) {
-          const recipientDoc = res.documents[0];
-          const subID = recipientDoc.nativeNotifyToken;
-          if (subID) {
-            await sendPushNotification(
-              subID,
-              title,
-              user.prefs?.firstName || user.email
-            );
-          }
-        }
-      }
-
-      await databases.createDocument(
-        DATABASE_ID,
-        EVENTS_ID,
-        ID.unique(),
-        documentData
-      );
-
-      await fetchMyEvents();
-      if (connectedUser?.userId) await fetchPartnerEvents();
-
-      setTitle("");
-      setDetails("");
-      setLocation("");
-      setDateTime(new Date());
-      setSuccess("Event successfully created!");
-      setTimeout(() => router.back(), 1000);
-    } catch (err) {
-      console.error("Error creating event:", err);
-      setError(err instanceof Error ? err.message : "Error creating Event");
-    } finally {
-      setIsSubmitted(false);
-    }
-  };
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>

@@ -13,13 +13,8 @@ import {
   USER_COLLECTION_ID,
 } from "./appwrite";
 import { UserPrefs } from "@/types/database.type";
-import * as NativeNotify from "native-notify";
 import * as Notifications from "expo-notifications";
 
-import {
-  NATIVE_NOTIFY_APP_ID,
-  NATIVE_NOTIFY_APP_TOKEN,
-} from "@/lib/native-notify";
 
 type AuthContextType = {
   user: SafeUser | null;
@@ -147,73 +142,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user?.$id, fetchConnectedUser]);
 
-  const getPushToken = async (): Promise<string | null> => {
+
+useEffect(() => {
+  if (!user?.$id) return;
+
+  const saveExpoPushToken = async () => {
     try {
-      const { status: existingStatus } =
-        await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
+      const userDocs = await databases.listDocuments(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        [Query.equal("userId", user.$id)],
+      );
+      if (!userDocs.documents.length) return;
 
-      if (existingStatus !== "granted") {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
+      const userDoc = userDocs.documents[0];
+      if (userDoc.expoPushToken) return; // already saved
 
-      if (finalStatus !== "granted") {
-        console.warn("Push notification permission not granted");
-        return null;
-      }
+      const { data: token } = await Notifications.getExpoPushTokenAsync();
+      if (!token) return;
 
-      // Get the Expo push token
-      const tokenData = await Notifications.getExpoPushTokenAsync();
-      return tokenData.data;
+      await databases.updateDocument(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        userDoc.$id,
+        { expoPushToken: token },
+      );
     } catch (err) {
-      console.error("Failed to get push token:", err);
-      return null;
+      console.warn("Failed to save Expo push token:", err);
     }
   };
 
-  useEffect(() => {
-    if (!user?.$id) return;
-
-    const registerPush = async () => {
-      try {
-        // Get the user's document
-        const userDocs = await databases.listDocuments(
-          DATABASE_ID,
-          USER_COLLECTION_ID,
-          [Query.equal("userId", user.$id)]
-        );
-        if (!userDocs.documents.length) return;
-
-        const userDoc = userDocs.documents[0];
-
-        // Only register if token is missing
-        if (!userDoc.nativeNotifyToken) {
-          const token = await getPushToken();
-          if (!token) return;
-
-          NativeNotify.registerIndieID(
-            user.$id,
-            NATIVE_NOTIFY_APP_ID,
-            NATIVE_NOTIFY_APP_TOKEN
-          );
-
-          await databases.updateDocument(
-            DATABASE_ID,
-            USER_COLLECTION_ID,
-            userDoc.$id,
-            { nativeNotifyToken: token }
-          );
-
-          console.log("✅ Native Notify registered for:", user.$id);
-        }
-      } catch (err) {
-        console.warn("⚠️ Native Notify registration failed:", err);
-      }
-    };
-
-    registerPush();
-  }, [user?.$id]);
+  saveExpoPushToken();
+}, [user?.$id]);
 
   const refreshUser = async () => {
     try {

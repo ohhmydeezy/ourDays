@@ -6,12 +6,17 @@ import React, {
   useEffect,
   useRef,
 } from "react";
-import { client, DATABASE_ID, databases, EVENTS_ID, USER_COLLECTION_ID } from "./appwrite";
+import {
+  client,
+  DATABASE_ID,
+  databases,
+  EVENTS_ID,
+  USER_COLLECTION_ID,
+} from "./appwrite";
 import { Query } from "appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { Events } from "@/types/database.type";
 import { Alert } from "react-native";
-import { NATIVE_NOTIFY_APP_ID, NATIVE_NOTIFY_APP_TOKEN } from "./native-notify";
 
 interface EventsContextType {
   myEvents: Events[];
@@ -22,6 +27,10 @@ interface EventsContextType {
   fetchPendingEvents: () => Promise<void>;
   handleAcceptEvent: (event: Events) => Promise<void>;
   handleDeclineEvent: (event: Events) => Promise<void>;
+  notifyEventCreated: (
+    recipientId: string,
+    eventTitle: string,
+  ) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -58,6 +67,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     try {
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("userId", user.$id),
+        Query.notEqual("status", "declined"),
       ]);
       if (!isMounted.current) return;
       setMyEvents(response.documents as unknown as Events[]);
@@ -77,6 +87,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     try {
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("userId", connectedUser.userId),
+        Query.notEqual("status", "declined"),
       ]);
       if (!isMounted.current) return;
       setPartnerEvents(response.documents as unknown as Events[]);
@@ -103,7 +114,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
       console.error("Error fetching pending events:", error);
       Alert.alert(
         "Error",
-        "Failed to load events. Check your Appwrite console for index errors."
+        "Failed to load events. Check your Appwrite console for index errors.",
       );
       setPendingEvents([]);
     } finally {
@@ -114,48 +125,69 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   const notifyEventStatus = async (
     recipientId: string,
     eventTitle: string,
-    status: "confirmed" | "declined"
+    status: "confirmed" | "declined",
   ) => {
     if (!recipientId) return;
 
     try {
-      // Fetch recipient document
       const res = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", recipientId)]
+        [Query.equal("userId", recipientId)],
       );
 
       if (!res.documents.length) return;
-      const recipientDoc = res.documents[0];
-      const subID = recipientDoc.nativeNotifyToken;
-      if (!subID) return;
 
-      const response = await fetch(
-        "https://app.nativenotify.com/api/indie/push",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            appId: NATIVE_NOTIFY_APP_ID,
-            appToken: NATIVE_NOTIFY_APP_TOKEN,
-            subID,
-            title:
-              status === "confirmed" ? "Event Accepted 🎉" : "Event Declined",
-            message:
-              status === "confirmed"
-                ? `Your event "${eventTitle}" was accepted 🎉`
-                : `Your event "${eventTitle}" was declined`,
-          }),
-        }
+      const expoPushToken = res.documents[0].expoPushToken;
+      if (!expoPushToken) return;
+
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: expoPushToken,
+          title:
+            status === "confirmed" ? "Event Accepted 🎉" : "Event Declined",
+          body:
+            status === "confirmed"
+              ? `Your event "${eventTitle}" was accepted 🎉`
+              : `Your event "${eventTitle}" was declined`,
+          data: { screen: "/(tabs)" },
+        }),
+      });
+    } catch (err) {
+      console.error("Push request failed:", err);
+    }
+  };
+
+  const notifyEventCreated = async (
+    recipientId: string,
+    eventTitle: string,
+  ) => {
+    if (!recipientId) return;
+
+    try {
+      const res = await databases.listDocuments(
+        DATABASE_ID,
+        USER_COLLECTION_ID,
+        [Query.equal("userId", recipientId)],
       );
 
-      const data = await response.json();
-      if (!response.ok) {
-        console.error("Native Notify error:", data);
-      } else {
-        console.log("Push sent successfully:", data);
-      }
+      if (!res.documents.length) return;
+
+      const expoPushToken = res.documents[0].expoPushToken;
+      if (!expoPushToken) return;
+
+      await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          to: expoPushToken,
+          title: "New Event 📅",
+          body: `You've been invited to "${eventTitle}"`,
+          data: { screen: "/(tabs)" },
+        }),
+      });
     } catch (err) {
       console.error("Push request failed:", err);
     }
@@ -171,9 +203,8 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         status: "confirmed",
       });
 
-      if (event.userId !== user.$id) {
-        await notifyEventStatus(event.recipientId, event.title, "confirmed");
-      }
+      // notify the person who created the event
+      await notifyEventStatus(event.userId, event.title, "confirmed");
 
       if (!isMounted.current) return;
       await fetchPendingEvents();
@@ -194,9 +225,8 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         status: "declined",
       });
 
-      if (event.userId !== user.$id) {
-        await notifyEventStatus(event.recipientId, event.title, "declined");
-      }
+      // notify the person who created the event
+      await notifyEventStatus(event.userId, event.title, "declined");
 
       if (!isMounted.current) return;
       await fetchPendingEvents();
@@ -238,7 +268,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
             "databases.*.collections.*.documents.*.create",
             "databases.*.collections.*.documents.*.update",
             "databases.*.collections.*.documents.*.delete",
-          ].some((pattern) => e.includes(pattern.replace("*", "")))
+          ].some((pattern) => e.includes(pattern.replace("*", ""))),
         )
       ) {
         fetchMyEvents();
@@ -265,6 +295,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         partnerEvents,
         pendingEvents,
         fetchMyEvents,
+        notifyEventCreated,
         fetchPartnerEvents,
         fetchPendingEvents,
         handleAcceptEvent,
