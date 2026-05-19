@@ -6,6 +6,5 @@ export const NATIVE_NOTIFY_APP_ID = Number(
 export const NATIVE_NOTIFY_APP_TOKEN =
   process.env.EXPO_PUBLIC_NATIVE_NOTIFY_APP_TOKEN!;
 
-// Helper flag
 export const NATIVE_NOTIFY_ENABLED =
   !!NATIVE_NOTIFY_APP_ID && !!NATIVE_NOTIFY_APP_TOKEN;

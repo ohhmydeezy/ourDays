@@ -9,6 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "entitlements": {
+        "aps-environment": "development"
+      },
       "supportsTablet": true,
       "bundleIdentifier": "com.dylan.gunda.ourDays",
       "infoPlist": {
@@ -17,7 +20,7 @@
     },
     "android": {
       "softwareKeyboardLayoutMode": "resize",
-      "googleServicesFile": "./google-services.json",
+      "googleServicesFile": "$GOOGLE_SERVICES_JSON",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

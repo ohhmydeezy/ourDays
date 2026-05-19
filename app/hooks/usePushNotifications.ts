@@ -5,14 +5,11 @@ import { Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
   notification?: Notifications.Notification;
 }
-
-// ─── Notification Handler ─────────────────────────────────────────────────────
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -23,8 +20,6 @@ Notifications.setNotificationHandler({
     shouldShowList: true,
   }),
 });
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function registerForPushNotificationsAsync(): Promise<
   Notifications.ExpoPushToken | undefined
@@ -57,7 +52,6 @@ async function registerForPushNotificationsAsync(): Promise<
   }
 }
 
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export const usePushNotifications = (): PushNotificationState => {
   const [expoPushToken, setExpoPushToken] =
