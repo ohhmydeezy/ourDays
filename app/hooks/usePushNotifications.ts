@@ -1,7 +1,7 @@
 import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
-import { Platform } from "react-native";
+import { Platform, AppState } from "react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -73,6 +73,8 @@ export const usePushNotifications = (): PushNotificationState => {
     async (response: Notifications.NotificationResponse) => {
       if (isNavigatingRef.current) return;
 
+      await Notifications.setBadgeCountAsync(0);
+
       const data = response.notification.request.content.data;
       if (!data?.screen) return;
 
@@ -108,6 +110,15 @@ export const usePushNotifications = (): PushNotificationState => {
       responseListener.current?.remove();
     };
   }, [handleNotificationResponse]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        Notifications.setBadgeCountAsync(0);
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   return { expoPushToken, notification };
 };

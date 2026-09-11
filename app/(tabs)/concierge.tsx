@@ -38,7 +38,8 @@ export default function ConciergeScreen() {
   ]);
   const [userInput, setUserInput] = useState("");
   const chatScrollViewRef = useRef<ScrollView>(null);
-
+  const isFirstMessage = useRef(true)
+  
   const fetchAllEvents = async () => {
     if (!user?.$id) return;
     try {
@@ -148,17 +149,19 @@ export default function ConciergeScreen() {
   const getConciergeResponse = async (query: string) => {
     setisTyping(true);
 
-    const scheduleContext = upcomingSchedule;
-
     const systemPrompt =
       'You are a friendly, insightful, and proactive relationship concierge service named "Dory". Your goal is to help a couple plan quality time together. Your responses should be warm, encouraging, and actionable.';
 
-    const userQuery = `My last joint event was ${timeSinceLastJointEvent} days ago
+  const userQuery = isFirstMessage.current
+    ? `My last joint event was ${timeSinceLastJointEvent} days ago
     upcoming Schedule (next 30 days): 
     ---
-    ${scheduleContext}
+    ${upcomingSchedule}
     ---
-    User Message: ${query}`;
+    User Message: ${query}`
+    : query;
+
+  isFirstMessage.current = false;
 
 const payload = {
   contents: [
