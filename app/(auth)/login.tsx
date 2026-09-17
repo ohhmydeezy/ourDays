@@ -134,6 +134,35 @@ const handleAuth = async () => {
                 },
               }}
             ></TextInput>
+            <TextInput
+              style={styles.input}
+              onChangeText={setPassword}
+              label="Password"
+              textColor="#000"
+              autoCapitalize="none"
+              secureTextEntry
+              textContentType="oneTimeCode"
+              placeholderTextColor="#000"
+              placeholder="Password"
+              mode="flat"
+              theme={{
+                colors: {
+                  primary: "blue",
+                  text: "#000",
+                },
+              }}
+            ></TextInput>
+
+            {!isSignUp && (
+              <Button
+                textColor="#000"
+                style={styles.forgotPasswordButton}
+                onPress={() => router.push("/forgot-password")}
+              >
+                Forgot password?
+              </Button>
+            )}
+
             {isSignUp && (
               <>
                 <TextInput
@@ -201,6 +230,7 @@ const handleAuth = async () => {
             >
               {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
+
             <Button
               textColor="#000"
               style={styles.switchButton}
@@ -208,7 +238,7 @@ const handleAuth = async () => {
             >
               {isSignUp
                 ? "Already have an account? Sign In"
-                : "Don't Have an account? Register"}
+                : "Don't have an account? Register"}
             </Button>
           </View>
         </ScrollView>
@@ -249,6 +279,10 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   button: {
+    marginTop: 8,
+    backgroundColor: "black",
+  },
+  forgotPasswordButton: {
     marginTop: 8,
     backgroundColor: "black",
   },

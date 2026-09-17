@@ -2,11 +2,11 @@ import { account } from "../../../lib/appwrite";
 import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
-
 import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { validatePassword } from "@/lib/auth-context";
 
 export default function ChangePasswordScreen() {
   const [error, setError] = useState("");
@@ -24,8 +24,10 @@ export default function ChangePasswordScreen() {
     if (!currentPassword || !newPassword || !confirmPassword) {
       return setError("All fields are required");
     }
-    if (newPassword.length < 8) {
-      return setError("New password must be at least 8 characters long.");
+    
+    const passwordError = validatePassword(newPassword)
+    if(passwordError){
+      return passwordError
     }
 
     if (newPassword !== confirmPassword) {

@@ -20,12 +20,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
         if (isLoadingUser) return;
 
         const inAuthGroup = segments[0] === "(auth)";
+        const isResetPasswordScreen = segments[1] === "reset-password";
 
         if (!user && !inAuthGroup) {
           router.replace("/(auth)/login");
         }
 
-        if (user && inAuthGroup) {
+        if (user && inAuthGroup && !isResetPasswordScreen) {
           router.replace("/(tabs)");
         }
 

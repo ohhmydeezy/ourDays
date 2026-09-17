@@ -67,6 +67,20 @@ function toSafeConnectedUser(doc: any) {
   };
 }
 
+export function validatePassword(password: string): string | null {
+   if (password.length < 8) {
+      return "Password is too short"
+    }
+    else if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+      return "password must contain at least one special character";
+    }
+    else if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter";
+    }
+    return null
+
+}
+
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -340,7 +354,6 @@ useEffect(() => {
     }
   };
 
-  //Sign Up function
 
   const signUp = async (
     email: string,
@@ -352,6 +365,12 @@ useEffect(() => {
     if (password !== confirmPassword) {
       return "Passwords do not match";
     }
+
+    const passwordError = validatePassword(password)
+    if(passwordError){
+      return passwordError
+    }
+
     try {
       await account.create(ID.unique(), email, password);
       await account.createEmailPasswordSession(email, password);

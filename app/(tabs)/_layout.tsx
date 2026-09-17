@@ -149,7 +149,7 @@ export default function TabsLayout() {
                     style={{
                       position: "absolute",
                       top: 0,
-                      right: -6, // adjust to position dot
+                      right: -6, 
                       width: 10,
                       height: 10,
                       borderRadius: 5,

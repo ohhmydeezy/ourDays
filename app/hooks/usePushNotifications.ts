@@ -5,7 +5,6 @@ import { Platform, AppState } from "react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-
 interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
   notification?: Notifications.Notification;
@@ -52,7 +51,6 @@ async function registerForPushNotificationsAsync(): Promise<
   }
 }
 
-
 export const usePushNotifications = (): PushNotificationState => {
   const [expoPushToken, setExpoPushToken] =
     useState<Notifications.ExpoPushToken>();
@@ -97,6 +95,12 @@ export const usePushNotifications = (): PushNotificationState => {
   useEffect(() => {
     registerForPushNotificationsAsync().then(setExpoPushToken);
 
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        Notifications.setBadgeCountAsync(0);
+      }
+    });
+
     notificationListener.current =
       Notifications.addNotificationReceivedListener(setNotification);
 
@@ -108,17 +112,8 @@ export const usePushNotifications = (): PushNotificationState => {
     return () => {
       notificationListener.current?.remove();
       responseListener.current?.remove();
+      sub.remove();
     };
   }, [handleNotificationResponse]);
-
-  useEffect(() => {
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
-        Notifications.setBadgeCountAsync(0);
-      }
-    });
-    return () => sub.remove();
-  }, []);
-
   return { expoPushToken, notification };
 };
