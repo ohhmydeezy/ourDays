@@ -62,7 +62,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <SafeAreaView style={{ backgroundColor: "#7381FF" }}>
+    <SafeAreaView style={[styles.container,{ backgroundColor: "#7381FF" }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={[styles.container, { backgroundColor: "#7381FF" }]}

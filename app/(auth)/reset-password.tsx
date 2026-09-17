@@ -64,10 +64,10 @@ export default function ResetPassword() {
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: "#7381FF" }}>
+    <SafeAreaView style={[styles.container, { backgroundColor: "#7381FF" }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
+        style={[styles.container, { backgroundColor: "#7381FF" }]}
       >
         <ScrollView>
           <View style={styles.homeLogo}>
