@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { validatePassword } from "@/lib/auth-context";
 import { account } from "@/lib/appwrite";
+import { ScrollView } from "react-native-gesture-handler";
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -68,67 +69,69 @@ export default function ResetPassword() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-        <View style={styles.homeLogo}>
-          <Text style={styles.appTitle}>OurDays</Text>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={{ width: "80%", maxHeight: 200 }}
-            resizeMode="contain"
-          />
-        </View>
-        <View>
-          <Text variant="headlineMedium"> Reset Password</Text>
+        <ScrollView>
+          <View style={styles.homeLogo}>
+            <Text style={styles.appTitle}>OurDays</Text>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={{ width: "80%", maxHeight: 200 }}
+              resizeMode="contain"
+            />
+          </View>
+          <View>
+            <Text variant="headlineMedium"> Reset Password</Text>
 
-          {success ? (
-            <>
-              <Text style={{ marginTop: 12, marginBottom: 24 }}>
-                Your password has been reset. You can now sign in with your new
-                password.
-              </Text>
-              <Button
-                mode="contained"
-                onPress={() => router.replace("/(auth)/login")}
-              >
-                Back to Sign In
-              </Button>
-            </>
-          ) : (
-            <>
-              <TextInput
-                style={styles.input}
-                onChangeText={setPassword}
-                label="New Password"
-                secureTextEntry
-                autoCapitalize="none"
-                placeholder="New Password"
-                mode="flat"
-              />
-              <TextInput
-                style={styles.input}
-                onChangeText={setConfirmPassword}
-                label="Confirm Password"
-                secureTextEntry
-                autoCapitalize="none"
-                placeholder="Confirm Password"
-                mode="flat"
-              />
+            {success ? (
+              <>
+                <Text style={{ marginTop: 12, marginBottom: 24 }}>
+                  Your password has been reset. You can now sign in with your
+                  new password.
+                </Text>
+                <Button
+                  mode="contained"
+                  onPress={() => router.replace("/(auth)/login")}
+                >
+                  Back to Sign In
+                </Button>
+              </>
+            ) : (
+              <>
+                <TextInput
+                  style={styles.input}
+                  onChangeText={setPassword}
+                  label="New Password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  placeholder="New Password"
+                  mode="flat"
+                />
+                <TextInput
+                  style={styles.input}
+                  onChangeText={setConfirmPassword}
+                  label="Confirm Password"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  placeholder="Confirm Password"
+                  mode="flat"
+                />
 
-              {error && (
-                <Text style={{ color: theme.colors.error }}>{error}</Text>
-              )}
+                {error && (
+                  <Text style={{ color: theme.colors.error }}>{error}</Text>
+                )}
 
-              <Button
-                style={{ marginTop: 16 }}
-                mode="contained"
-                onPress={handlePasswordReset}
-                loading={loading}
-                disabled={loading}
-              >
-                Reset Password
-              </Button>
-            </>
-          )}
-        </View>
+                <Button
+                  style={{ marginTop: 16 }}
+                  mode="contained"
+                  onPress={handlePasswordReset}
+                  loading={loading}
+                  disabled={loading}
+                >
+                  Reset Password
+                </Button>
+              </>
+            )}
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

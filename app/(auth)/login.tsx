@@ -155,8 +155,8 @@ const handleAuth = async () => {
 
             {!isSignUp && (
               <Button
-                textColor="#000"
-                style={styles.forgotPasswordButton}
+                textColor="#999"
+                style={styles.button}
                 onPress={() => router.push("/forgot-password")}
               >
                 Forgot password?
@@ -279,10 +279,6 @@ const styles = StyleSheet.create({
     color: "#000",
   },
   button: {
-    marginTop: 8,
-    backgroundColor: "black",
-  },
-  forgotPasswordButton: {
     marginTop: 8,
     backgroundColor: "black",
   },

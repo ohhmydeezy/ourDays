@@ -8,6 +8,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { ScrollView } from "react-native-gesture-handler";
 import { useTheme, Text, TextInput, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -66,46 +67,50 @@ export default function ForgotPassword() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={[styles.container, { backgroundColor: "#7381FF" }]}
       >
-        <View style={styles.homeLogo}>
-          <Text style={styles.appTitle}>OurDays</Text>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={{ width: "80%", maxHeight: 200 }}
-            resizeMode="contain"
-          />
-        </View>
-        <View style={styles.content}>
-          <Text variant="headlineMedium">Forgot Password</Text>
-          <Text style={{ marginTop: 8, marginBottom: 16 }}>
-            Enter your email and we&apos;ll send you a link to reset your
-            password.
-          </Text>
-          <TextInput
-            style={styles.input}
-            onChangeText={setEmail}
-            label="Email"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            placeholder="example@gmail.com"
-            mode="flat"
-          />
+        <ScrollView>
+          <View style={styles.homeLogo}>
+            <Text style={styles.appTitle}>OurDays</Text>
+            <Image
+              source={require("../../assets/images/logo.png")}
+              style={{ width: "80%", maxHeight: 200 }}
+              resizeMode="contain"
+            />
+          </View>
+          <View style={styles.content}>
+            <Text variant="headlineMedium">Forgot Password</Text>
+            <Text style={{ marginTop: 8, marginBottom: 16 }}>
+              Enter your email and we&apos;ll send you a link to reset your
+              password.
+            </Text>
+            <TextInput
+              style={styles.input}
+              onChangeText={setEmail}
+              label="Email"
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="example@gmail.com"
+              mode="flat"
+            />
 
-          {error && <Text style={{ color: theme.colors.error }}>{error}</Text>}
+            {error && (
+              <Text style={{ color: theme.colors.error }}>{error}</Text>
+            )}
 
-          <Button
-            style={{ marginTop: 16 }}
-            mode="contained"
-            onPress={handleRequestReset}
-            loading={loading}
-            disabled={loading}
-          >
-            Send Reset Link
-          </Button>
+            <Button
+              style={{ marginTop: 16 }}
+              mode="contained"
+              onPress={handleRequestReset}
+              loading={loading}
+              disabled={loading}
+            >
+              Send Reset Link
+            </Button>
 
-          <Button style={{ marginTop: 8 }} onPress={() => router.back()}>
-            Back to Sign In
-          </Button>
-        </View>
+            <Button style={{ marginTop: 8 }} onPress={() => router.back()}>
+              Back to Sign In
+            </Button>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
