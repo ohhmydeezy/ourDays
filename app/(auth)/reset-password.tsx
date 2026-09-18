@@ -79,7 +79,10 @@ export default function ResetPassword() {
             />
           </View>
           <View>
-            <Text variant="headlineMedium"> Reset Password</Text>
+            <Text style={styles.title} variant="headlineMedium">
+              {" "}
+              Reset Password
+            </Text>
 
             {success ? (
               <>
@@ -153,12 +156,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
   },
+  title: {
+    textAlign: "center",
+    marginBottom: 24,
+    color: "#000",
+  },
   content: {
     flex: 1,
     padding: 24,
     justifyContent: "center",
   },
   input: {
-    marginBottom: 8,
+    marginBottom: 16,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    color: "#000",
   },
 });

@@ -62,7 +62,7 @@ export default function ForgotPassword() {
   }
 
   return (
-    <SafeAreaView style={[styles.container,{ backgroundColor: "#7381FF" }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: "#7381FF" }]}>
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={[styles.container, { backgroundColor: "#7381FF" }]}
@@ -77,7 +77,9 @@ export default function ForgotPassword() {
             />
           </View>
           <View style={styles.content}>
-            <Text variant="headlineMedium">Forgot Password</Text>
+            <Text style={styles.title} variant="headlineMedium">
+              Forgot Password
+            </Text>
             <Text style={{ marginTop: 8, marginBottom: 16 }}>
               Enter your email and we&apos;ll send you a link to reset your
               password.
@@ -132,12 +134,20 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 16,
   },
+  title: {
+    textAlign: "center",
+    marginBottom: 24,
+    color: "#000",
+  },
   content: {
     flex: 1,
     padding: 24,
     justifyContent: "center",
   },
   input: {
-    marginBottom: 8,
+    marginBottom: 16,
+    backgroundColor: "transparent",
+    borderBottomWidth: 1,
+    color: "#000",
   },
 });
