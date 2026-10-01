@@ -31,12 +31,15 @@ export default function ForgotPassword() {
     try {
       await account.createRecovery({
         email,
-        url: "ourdays://reset-password",
+        url: "https://ourdays-reset.appwrite.network",
       });
       setSuccess(true);
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
-      setSuccess(true);
+      console.log("Recovery request error:", err);
+      if (err instanceof Error) {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -44,20 +47,31 @@ export default function ForgotPassword() {
 
   if (success) {
     return (
-      <View>
-        <Text variant="headlineMedium">Check your Email</Text>
-        <Text style={{ marginTop: 12 }}>
-          If an account exists for {email}, we&apos;ve sent a password reset
-          link.
-        </Text>
-        <Button
-          style={{ marginTop: 24 }}
-          mode="contained"
-          onPress={() => router.replace("/(auth)/login")}
+      <SafeAreaView style={[styles.container, { backgroundColor: "#7381FF" }]}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={[styles.container, { backgroundColor: "#7381FF" }]}
         >
-          Back to Sign In
-        </Button>
-      </View>
+          <ScrollView>
+            <View style={styles.content}>
+              <Text style={styles.title} variant="headlineMedium">
+                Check your Email
+              </Text>
+              <Text style={{ marginTop: 12 }}>
+                If an account exists for {email}, we&apos;ve sent a password
+                reset link.
+              </Text>
+              <Button
+                style={{ marginTop: 24 }}
+                mode="contained"
+                onPress={() => router.replace("/(auth)/login")}
+              >
+                Back to Sign In
+              </Button>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     );
   }
 
@@ -72,7 +86,7 @@ export default function ForgotPassword() {
             <Text style={styles.appTitle}>OurDays</Text>
             <Image
               source={require("../../assets/images/logo.png")}
-              style={{ width: "80%", maxHeight: 200 }}
+              style={{ width: "80%", maxHeight: 280 }}
               resizeMode="contain"
             />
           </View>
@@ -92,6 +106,14 @@ export default function ForgotPassword() {
               keyboardType="email-address"
               placeholder="example@gmail.com"
               mode="flat"
+              theme={{
+                colors: {
+                  primary: "blue",
+                  text: "#000",
+                  onSurfaceVariant: "#000",
+                  placeholder: "#000",
+                },
+              }}
             />
 
             {error && (

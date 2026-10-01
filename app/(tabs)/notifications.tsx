@@ -10,6 +10,7 @@ import {
 import { Swipeable } from "react-native-gesture-handler";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AdBanner from "../components/AdBanner";
 
 export default function NotificationsScreen() {
   const {
@@ -68,6 +69,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
+      <AdBanner />
       <View style={styles.header}>
         <Text style={styles.headerText}>Notifications</Text>
       </View>

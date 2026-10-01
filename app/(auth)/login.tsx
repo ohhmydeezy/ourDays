@@ -9,7 +9,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Button, Text, TextInput, useTheme } from "react-native-paper";
+import { Button, Text, TextInput } from "react-native-paper";
 import { ScrollView } from "react-native-gesture-handler";
 
 export default function AuthScreen() {
@@ -20,58 +20,65 @@ export default function AuthScreen() {
   const [error, setError] = useState<string | null>("");
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
-  const theme = useTheme();
   const router = useRouter();
   const { signIn, signUp } = useAuth();
 
-const handleAuth = async () => {
-  if (isLoading) return;
+  const handleAuth = async () => {
+    if (isLoading) return;
 
-  setIsLoading(true);
-  setError(null);
+    setIsLoading(true);
+    setError(null);
 
-  try {
-    if (!email || !password) {
-      setError("Please fill in all fields");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      return;
-    }
-
-    if (isSignUp) {
-      const error = await signUp(
-        email,
-        password,
-        passwordConfirm,
-        firstName,
-        surname
-      );
-      if (error) {
-        setError(error);
+    try {
+      if (!email || !password) {
+        setError("Please fill in all fields");
         return;
       }
-    } else {
-      const error = await signIn(email, password);
-      if (error) {
-        setError(error);
+
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters long");
         return;
       }
+
+      if (isSignUp) {
+        const error = await signUp(
+          email,
+          password,
+          passwordConfirm,
+          firstName,
+          surname,
+        );
+        if (error) {
+          setError(error);
+          return;
+        }
+      } else {
+        const error = await signIn(email, password);
+        if (error) {
+          setError(error);
+          return;
+        }
+      }
+
+      router.replace("/");
+    } finally {
+      setIsLoading(false);
     }
-
-    router.replace("/");
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   const handleSwitchMode = () => {
     setIsSignUp((prev) => !prev);
+  };
+
+  const inputTheme = {
+    colors: {
+      primary: "blue",
+      text: "#000",
+      onSurfaceVariant: "#000",
+      placeholder: "#000",
+    },
   };
 
   return (
@@ -90,7 +97,7 @@ const handleAuth = async () => {
             <Text style={styles.appTitle}>OurDays</Text>
             <Image
               source={require("../../assets/images/logo.png")}
-              style={{ width: "80%", maxHeight: 200 }}
+              style={{ width: "80%", maxHeight: 280 }}
               resizeMode="contain"
             />
           </View>
@@ -107,11 +114,13 @@ const handleAuth = async () => {
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="example@gmail.com"
-              placeholderTextColor="#000"
               mode="flat"
               theme={{
                 colors: {
                   primary: "blue",
+                  text: "#000",
+                  onSurfaceVariant: "#000",
+                  placeholder: "#000",
                 },
               }}
             ></TextInput>
@@ -123,45 +132,10 @@ const handleAuth = async () => {
               textColor="#000"
               autoCapitalize="none"
               secureTextEntry
-              textContentType="oneTimeCode"
-              placeholderTextColor="#000"
               placeholder="Password"
               mode="flat"
-              theme={{
-                colors: {
-                  primary: "blue",
-                  text: "#000",
-                },
-              }}
+              theme={inputTheme}
             ></TextInput>
-            <TextInput
-              style={styles.input}
-              onChangeText={setPassword}
-              label="Password"
-              textColor="#000"
-              autoCapitalize="none"
-              secureTextEntry
-              textContentType="oneTimeCode"
-              placeholderTextColor="#000"
-              placeholder="Password"
-              mode="flat"
-              theme={{
-                colors: {
-                  primary: "blue",
-                  text: "#000",
-                },
-              }}
-            ></TextInput>
-
-            {!isSignUp && (
-              <Button
-                textColor="#999"
-                style={styles.button}
-                onPress={() => router.push("/forgot-password")}
-              >
-                Forgot password?
-              </Button>
-            )}
 
             {isSignUp && (
               <>
@@ -174,14 +148,8 @@ const handleAuth = async () => {
                   secureTextEntry
                   textContentType="oneTimeCode"
                   placeholder="Confirm Password"
-                  placeholderTextColor="#000"
                   mode="flat"
-                  theme={{
-                    colors: {
-                      primary: "blue",
-                      background: "transparent",
-                    },
-                  }}
+                  theme={inputTheme}
                 />
                 <TextInput
                   style={styles.input}
@@ -190,14 +158,8 @@ const handleAuth = async () => {
                   textColor="#000"
                   autoCapitalize="none"
                   placeholder="First Name"
-                  placeholderTextColor="#000"
                   mode="flat"
-                  theme={{
-                    colors: {
-                      primary: "blue",
-                      background: "transparent",
-                    },
-                  }}
+                  theme={inputTheme}
                 />
                 <TextInput
                   style={styles.input}
@@ -206,30 +168,32 @@ const handleAuth = async () => {
                   textColor="#000"
                   autoCapitalize="none"
                   placeholder="Surname"
-                  placeholderTextColor="#000"
                   mode="flat"
-                  theme={{
-                    colors: {
-                      primary: "blue",
-                      background: "transparent",
-                    },
-                  }}
+                  theme={inputTheme}
                 />
               </>
             )}
 
-            {error && (
-              <Text style={{ color: theme.colors.error }}>{error}</Text>
-            )}
+            {error && <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>}
 
             <Button
-              textColor="#999"
+              textColor="#cdcdcd"
               style={styles.button}
               onPress={handleAuth}
               mode="contained"
             >
               {isSignUp ? "Sign Up" : "Sign In"}
             </Button>
+
+            {!isSignUp && (
+              <Button
+                textColor="#cdcdcd"
+                style={styles.button}
+                onPress={() => router.push("/forgot-password")}
+              >
+                Forgot password?
+              </Button>
+            )}
 
             <Button
               textColor="#000"
@@ -252,7 +216,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   appTitle: {
-    marginTop: 16,
     fontWeight: "bold",
     fontSize: 32,
     alignItems: "center",
@@ -261,15 +224,14 @@ const styles = StyleSheet.create({
   homeLogo: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
   },
   content: {
     flex: 0.5,
-    padding: 16,
+    padding: 24,
   },
   title: {
     textAlign: "center",
-    marginBottom: 24,
+    marginBottom: 6,
     color: "#000",
   },
   input: {
@@ -282,8 +244,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: "black",
   },
+  forgotButton: {
+    marginTop: 8,
+    backgroundColor: "black",
+  },
   switchButton: {
-    marginTop: 16,
+    marginTop: 8,
     color: "#000",
   },
 });

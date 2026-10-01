@@ -28,6 +28,7 @@ import RNDateTimePicker from "@react-native-community/datetimepicker";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useEventsData } from "@/lib/events-context";
 import { ScrollView } from "react-native-gesture-handler";
+import AdBanner from "../components/AdBanner";
 
 export default function AddEventScreen() {
   const [title, setTitle] = useState("");
@@ -118,6 +119,7 @@ const handleSubmit = async () => {
             keyboardShouldPersistTaps="handled"
             showsHorizontalScrollIndicator={false}
           >
+            <AdBanner />
             <View style={styles.header}>
               <Text style={{ color: "white", padding: 12 }}>New Event</Text>
             </View>

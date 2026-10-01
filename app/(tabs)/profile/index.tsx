@@ -1,3 +1,4 @@
+import AdBanner from "@/app/components/AdBanner";
 import { account } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
@@ -22,7 +23,9 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={{ justifyContent: "center" }}>
+              <AdBanner />
+      <View style={{ justifyContent: "center"}}>
+
         <View style={styles.header}>
           <Text style={{ color: "white", padding: 12, fontWeight: "bold" }}>
             Profile

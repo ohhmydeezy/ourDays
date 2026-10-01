@@ -17,6 +17,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useEventsData } from "@/lib/events-context";
 import { Query } from "react-native-appwrite";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import AdBanner from "../components/AdBanner";
 
 export default function HomeScreen() {
   const { user, connectedUser, refreshUser } = useAuth();
@@ -292,6 +293,7 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
+      <AdBanner />
       <View style={styles.topButtons}>
         <Button
           style={styles.button}

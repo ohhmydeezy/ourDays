@@ -1,0 +1,88 @@
+export default {
+  expo: {
+    name: "OurDays",
+    slug: "ourdays",
+    version: "1.0.0",
+    orientation: "portrait",
+    icon: "./assets/images/icon.png",
+    scheme: "ourdays",
+    userInterfaceStyle: "automatic",
+    newArchEnabled: true,
+    ios: {
+      entitlements: {
+        "aps-environment": "development",
+      },
+      supportsTablet: true,
+      bundleIdentifier: "co.dylan.gunda.ourDays",
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
+    },
+    android: {
+      softwareKeyboardLayoutMode: "resize",
+      googleServicesFile: "./google-services.json",
+      adaptiveIcon: {
+        backgroundColor: "#E6F4FE",
+        foregroundImage: "./assets/images/android-icon-foreground.png",
+        backgroundImage: "./assets/images/android-icon-background.png",
+        monochromeImage: "./assets/images/android-icon-monochrome.png",
+      },
+      predictiveBackGestureEnabled: false,
+      package: "com.dylan.gunda.ourDays",
+    },
+    web: {
+      output: "static",
+      favicon: "./assets/images/favicon.png",
+    },
+    plugins: [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/images/icon.png",
+          color: "#E6F4FE",
+        },
+      ],
+      [
+        "expo-splash-screen",
+        {
+          image: "./assets/images/splash-icon.png",
+          imageWidth: 200,
+          resizeMode: "contain",
+          backgroundColor: "#ffffff",
+          dark: {
+            backgroundColor: "#000000",
+          },
+        },
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          iosAppId: process.env.EXPO_PUBLIC_ADMOB_IOS_APP_ID,
+          androidAppId: process.env.EXPO_PUBLIC_ADMOB_ANDROID_APP_ID,
+        },
+      ],
+      [
+        "expo-build-properties",
+        {
+          ios: {
+            useFrameworks: "static",
+            deploymentTarget: "16.4",
+          },
+        },
+      ],
+    ],
+
+    experiments: {
+      typedRoutes: true,
+      reactCompiler: true,
+    },
+    extra: {
+      router: {},
+      eas: {
+        projectId: "43c4f064-71aa-4171-9887-6428b0a74e02",
+      },
+    },
+    owner: "dylangundas-organization",
+  },
+};

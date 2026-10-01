@@ -32,6 +32,7 @@ export default function ResetPassword() {
       setError(
         "This reset link is invalid or has expired. Please request a new one.",
       );
+      return;
     } else if (password !== confirmPassword) {
       setError("Passwords do not match");
       return;
@@ -74,7 +75,7 @@ export default function ResetPassword() {
             <Text style={styles.appTitle}>OurDays</Text>
             <Image
               source={require("../../assets/images/logo.png")}
-              style={{ width: "80%", maxHeight: 200 }}
+              style={{ width: "80%", maxHeight: 280 }}
               resizeMode="contain"
             />
           </View>
@@ -107,6 +108,14 @@ export default function ResetPassword() {
                   autoCapitalize="none"
                   placeholder="New Password"
                   mode="flat"
+                  theme={{
+                    colors: {
+                      primary: "blue",
+                      text: "#000",
+                      onSurfaceVariant: "#000",
+                      placeholder: "#000",
+                    },
+                  }}
                 />
                 <TextInput
                   style={styles.input}
@@ -116,6 +125,14 @@ export default function ResetPassword() {
                   autoCapitalize="none"
                   placeholder="Confirm Password"
                   mode="flat"
+                  theme={{
+                    colors: {
+                      primary: "blue",
+                      text: "#000",
+                      onSurfaceVariant: "#000",
+                      placeholder: "#000",
+                    },
+                  }}
                 />
 
                 {error && (

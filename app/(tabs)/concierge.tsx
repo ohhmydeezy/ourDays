@@ -13,6 +13,7 @@ import { Text, ActivityIndicator } from "react-native-paper";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import AdBanner from "../components/AdBanner";
 
 
 // Gemini API implementation
@@ -233,7 +234,9 @@ const payload = {
   }, [messages]);
 
   return (
+    
     <SafeAreaView edges={["bottom"]} style={conciergeStyles.container}>
+      <AdBanner />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
