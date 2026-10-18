@@ -69,7 +69,7 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
-      <AdBanner />
+      <AdBanner style={styles.adBanner} />
       <View style={styles.header}>
         <Text style={styles.headerText}>Notifications</Text>
       </View>
@@ -106,7 +106,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: 25,
     padding: 12,
-    marginBottom: 16,
+    margin: 16,
+
+  },
+  adBanner: {
+    marginVertical: 12,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    overflow: "hidden",
   },
   headerText: { color: "white", fontSize: 20, fontWeight: "bold" },
   content: { flex: 1 },

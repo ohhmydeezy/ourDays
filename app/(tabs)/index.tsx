@@ -293,12 +293,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
-      <AdBanner />
+      <AdBanner style={styles.adBanner} />
       <View style={styles.topButtons}>
         <Button
           style={styles.button}
           onPress={() => setCalenderView(false)}
-          buttonColor={isCalenderView ? "#ccc" : "#555555"}
+          buttonColor={isCalenderView ? "#ccc" : "#8873FF"}
           textColor={isCalenderView ? "#000" : "#fff"}
           mode={!isCalenderView ? "contained" : "outlined"}
         >
@@ -307,7 +307,7 @@ export default function HomeScreen() {
         <Button
           style={styles.button}
           onPress={() => setCalenderView(true)}
-          buttonColor={!isCalenderView ? "#ccc" : "#555555"}
+          buttonColor={!isCalenderView ? "#ccc" : "#8873FF"}
           textColor={!isCalenderView ? "#000" : "#fff"}
           mode={isCalenderView ? "contained" : "outlined"}
         >
@@ -401,6 +401,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  adBanner: {
+    marginVertical: 12,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    overflow: "hidden",
   },
   topButtons: {
     flexDirection: "row",

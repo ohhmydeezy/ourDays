@@ -7,11 +7,13 @@ import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Text, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
+import RevenueCatUI from "react-native-purchases-ui";
+import { useSubsciption } from "@/app/hooks/useSubscription";
 
 export default function ProfileScreen() {
-  const { user, connectedUser,signOut, refreshUser } = useAuth();
+  const { user, connectedUser, signOut, refreshUser } = useAuth();
   const [shareCode, setShareCode] = useState<string | null>(null);
-
+  const { isSubscribed } = useSubsciption();
 
   const generateShareCode = async () => {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -20,12 +22,10 @@ export default function ProfileScreen() {
     setShareCode(code);
   };
 
-
   return (
     <SafeAreaView style={styles.container}>
-              <AdBanner />
-      <View style={{ justifyContent: "center"}}>
-
+      <AdBanner style={styles.adBanner} />
+      <View style={{ justifyContent: "center" }}>
         <View style={styles.header}>
           <Text style={{ color: "white", padding: 12, fontWeight: "bold" }}>
             Profile
@@ -134,12 +134,32 @@ export default function ProfileScreen() {
             )}
           </View>
         </View>
+        {!isSubscribed && (
+          <Button
+            mode="contained"
+            buttonColor="#ECFF73"
+            textColor="#000"
+            style={styles.upgradeButton}
+            labelStyle={styles.upgradeLabel}
+            contentStyle={{ paddingVertical: 4 }}
+            onPress={() => RevenueCatUI.presentPaywall()}
+            icon={({ size }) => (
+              <MaterialCommunityIcons name="crown" color="#000" size={size} />
+            )}
+          >
+            Upgrade to Pro
+          </Button>
+        )}
         <Button
           mode="text"
           textColor="#000"
           onPress={() => router.push("/profile/account-details")}
           icon={({ color, size }) => (
-            <MaterialCommunityIcons name="account-circle" color="#000" size={size} />
+            <MaterialCommunityIcons
+              name="account-circle"
+              color="#000"
+              size={size}
+            />
           )}
         >
           Account Details
@@ -184,6 +204,26 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: "center",
   },
+  upgradeButton: {
+    width: 250,
+    alignSelf: "center",
+    marginHorizontal: 16,
+    marginVertical: 8,
+    borderRadius: 28,
+    borderWidth: 3,
+    borderColor: "#555555",
+  },
+  upgradeLabel: {
+    fontWeight: "bold",
+    fontSize: 16,
+    letterSpacing: 0.5,
+  },
+  adBanner: {
+    marginVertical: 12,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
   profileContainer: {
     marginTop: 24,
     backgroundColor: "white",
@@ -194,6 +234,7 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#555555",
     alignItems: "center",
+    marginTop: 24,
     borderRadius: 25,
   },
   shareContainer: {

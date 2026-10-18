@@ -148,6 +148,14 @@ export default function ResetPassword() {
                 >
                   Reset Password
                 </Button>
+
+                <Button
+                  style={{ marginTop: 16 }}
+                  mode="contained"
+                  onPress={() => router.replace("/(auth)/login")}
+                >
+                  Back to Sign In
+                </Button>
               </>
             )}
           </View>

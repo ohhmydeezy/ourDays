@@ -16,7 +16,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AdBanner from "../components/AdBanner";
 
 
-// Gemini API implementation
 
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
 const model_name = "gemini-2.5-flash";
@@ -67,6 +66,7 @@ export default function ConciergeScreen() {
   useEffect(() => {
     if (!user?.$id || !connectedUser?.userId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAllEvents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.$id, connectedUser?.userId]); 
@@ -234,9 +234,8 @@ const payload = {
   }, [messages]);
 
   return (
-    
     <SafeAreaView edges={["bottom"]} style={conciergeStyles.container}>
-      <AdBanner />
+      <AdBanner style={conciergeStyles.adBanner} />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -321,91 +320,97 @@ const payload = {
 }
 
 const conciergeStyles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f5f5f5',
-        padding: 16,
-        paddingBottom: 70
-    },
-    header: {
-        fontSize: 24,
-        fontWeight: 'bold',
-        textAlign: 'center',
-        marginBottom: 10,
-        color: '#555555',
-    },
-    chatWindow: {
-        flex: 1,
-        backgroundColor: 'white',
-        borderRadius: 15,
-        borderWidth: 1,
-        borderColor: '#ddd',
-        marginBottom: 10,
-        overflow: 'hidden',
-    },
-    chatMessages: {
-        paddingHorizontal: 10,
-    },
-    messageBubble: {
-        padding: 12,
-        borderRadius: 15,
-        marginBottom: 10,
-        maxWidth: '85%',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 1,
-        elevation: 2,
-    },
-    userBubble: {
-        alignSelf: 'flex-end',
-        backgroundColor: '#84E2FF',
-        borderBottomRightRadius: 5,
-    },
-    conciergeBubble: {
-        alignSelf: 'flex-start',
-        backgroundColor: '#f0f0f0', 
-        borderBottomLeftRadius: 5,
-    },
-    messageText: {
-        fontSize: 15,
-        lineHeight: 20,
-    },
-    userText: {
-        color: '#000',
-    },
-    conciergeText: {
-        color: '#333',
-    },
-    chatInputContainer: {
-        flexDirection: 'row',
-        paddingVertical: 8,
-        paddingHorizontal: 0,
-        backgroundColor: '#f5f5f5',
-    },
-    chatInput: {
-        flex: 1,
-        borderWidth: 1,
-        borderColor: '#ccc',
-        borderRadius: 25,
-        paddingHorizontal: 15,
-        paddingVertical: 10,
-        marginRight: 8,
-        backgroundColor: 'white',
-        fontSize: 15,
-    },
-    sendButton: {
-        backgroundColor: '#555555',
-        width: 45,
-        height: 45,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    statusText: {
-        textAlign: 'center',
-        marginTop: 5,
-        fontSize: 12,
-        color: '#888',
-    }
-})
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5",
+    padding: 16,
+    paddingBottom: 70,
+  },
+  adBanner: {
+    marginVertical: 12,
+    backgroundColor: "#F5F5F5",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: "bold",
+    textAlign: "center",
+    margin: 16,
+    color: "#555555",
+  },
+  chatWindow: {
+    flex: 1,
+    backgroundColor: "white",
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    marginBottom: 10,
+    overflow: "hidden",
+  },
+  chatMessages: {
+    paddingHorizontal: 10,
+  },
+  messageBubble: {
+    padding: 12,
+    borderRadius: 15,
+    marginBottom: 10,
+    maxWidth: "85%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 1,
+    elevation: 2,
+  },
+  userBubble: {
+    alignSelf: "flex-end",
+    backgroundColor: "#84E2FF",
+    borderBottomRightRadius: 5,
+  },
+  conciergeBubble: {
+    alignSelf: "flex-start",
+    backgroundColor: "#f0f0f0",
+    borderBottomLeftRadius: 5,
+  },
+  messageText: {
+    fontSize: 15,
+    lineHeight: 20,
+  },
+  userText: {
+    color: "#000",
+  },
+  conciergeText: {
+    color: "#333",
+  },
+  chatInputContainer: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    backgroundColor: "#f5f5f5",
+  },
+  chatInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 8,
+    backgroundColor: "white",
+    fontSize: 15,
+  },
+  sendButton: {
+    backgroundColor: "#555555",
+    width: 45,
+    height: 45,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  statusText: {
+    textAlign: "center",
+    marginTop: 5,
+    fontSize: 12,
+    color: "#888",
+  },
+});

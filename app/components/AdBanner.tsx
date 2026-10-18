@@ -1,11 +1,20 @@
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, ViewStyle, StyleProp } from "react-native";
 import {
   BannerAd,
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
+import { useSubsciption } from "../hooks/useSubscription";
 
-export default function AdBanner() {
+interface AdBannerProps {
+  style?: StyleProp<ViewStyle>;
+}
+
+export default function AdBanner({ style }: AdBannerProps) {
+  const { isSubscribed, loading } = useSubsciption();
+
+  if (loading || isSubscribed) return null;
+
   return (
     <View style={styles.container}>
       <BannerAd
