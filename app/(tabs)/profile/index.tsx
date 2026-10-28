@@ -8,12 +8,12 @@ import { View, StyleSheet } from "react-native";
 import { Text, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import RevenueCatUI from "react-native-purchases-ui";
-import { useSubsciption } from "@/app/hooks/useSubscription";
+import { useSubscription } from "@/app/hooks/useSubscription";
 
 export default function ProfileScreen() {
   const { user, connectedUser, signOut, refreshUser } = useAuth();
   const [shareCode, setShareCode] = useState<string | null>(null);
-  const { isSubscribed } = useSubsciption();
+  const { isSubscribed } = useSubscription();
 
   const generateShareCode = async () => {
     const code = Math.random().toString(36).substring(2, 8).toUpperCase();

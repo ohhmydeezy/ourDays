@@ -1,33 +1,46 @@
 import { useAuth } from "@/lib/auth-context";
+import { client, DATABASE_ID, databases, EVENTS_ID } from "@/lib/appwrite";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  client,
-  DATABASE_ID,
-  databases,
-  EVENTS_ID,
-} from "@/lib/appwrite";
-import { useEffect, useMemo, useRef, useState } from "react"
-import { View, StyleSheet, TextInput, TouchableOpacity, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard, Platform } from "react-native";
+  View,
+  StyleSheet,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
+} from "react-native";
 import { Events } from "@/types/database.type";
-import {  Query } from "react-native-appwrite";
+import { Query, Functions, ExecutionMethod } from "react-native-appwrite";
 import { Text, ActivityIndicator } from "react-native-paper";
 import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AdBanner from "../components/AdBanner";
-
-
-
-const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-const model_name = "gemini-2.5-flash";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${model_name}:generateContent?key=${GEMINI_API_KEY}`;
+import RevenueCatUI from "react-native-purchases-ui";
+import { useSubscription } from "../hooks/useSubscription";
+import { useChatQuota } from "../hooks/useChatQuota";
 
 interface Message {
   role: "user" | "concierge";
   text: string;
 }
 
+const functions = new Functions(client);
+const CONCIERGE_FUNCTION_ID = process.env.EXPO_PUBLIC_CONCIERGE_FUNCTION_ID!;
+
 export default function ConciergeScreen() {
   const { user, connectedUser } = useAuth();
+  const { isSubscribed, loading: subLoading } = useSubscription();
+  const {
+    remaining,
+    canSend,
+    loading: quotaLoading,
+    isPro,
+    refreshQuota,
+    updateQuota,
+  } = useChatQuota(isSubscribed);
   const [isTyping, setisTyping] = useState(false);
   const [allEvents, setAllEvents] = useState<Events[]>([]);
   const [messages, setMessages] = useState<Message[]>([
@@ -38,8 +51,8 @@ export default function ConciergeScreen() {
   ]);
   const [userInput, setUserInput] = useState("");
   const chatScrollViewRef = useRef<ScrollView>(null);
-  const isFirstMessage = useRef(true)
-  
+  const isFirstMessage = useRef(true);
+
   const fetchAllEvents = async () => {
     if (!user?.$id) return;
     try {
@@ -48,14 +61,14 @@ export default function ConciergeScreen() {
       ]);
       const myEvents = response.documents as unknown as Events[];
 
-      let partnerEvents: Events[] = []
-      if(connectedUser?.userId) {
+      let partnerEvents: Events[] = [];
+      if (connectedUser?.userId) {
         const partnerResponse = await databases.listDocuments(
-        DATABASE_ID,
-        EVENTS_ID,
-        [Query.equal("userId", connectedUser.userId)]
-      );
-      partnerEvents = partnerResponse.documents as unknown as Events[];
+          DATABASE_ID,
+          EVENTS_ID,
+          [Query.equal("userId", connectedUser.userId)],
+        );
+        partnerEvents = partnerResponse.documents as unknown as Events[];
       }
       setAllEvents([...myEvents, ...partnerEvents]);
     } catch (error) {
@@ -64,12 +77,12 @@ export default function ConciergeScreen() {
   };
 
   useEffect(() => {
-    if (!user?.$id || !connectedUser?.userId) return;
+    if (!user?.$id) return;
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAllEvents();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.$id, connectedUser?.userId]); 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.$id, connectedUser?.userId]);
 
   useEffect(() => {
     if (!user?.$id) return;
@@ -80,12 +93,13 @@ export default function ConciergeScreen() {
       const payload = response.payload as any;
       const isRelevant =
         payload?.userId === user.$id ||
-        payload?.userId === connectedUser.userId;
+        (connectedUser?.userId != null &&
+          payload.userId === connectedUser.userId);
 
       if (
         isRelevant &&
         response.events.some((e) =>
-          ["create", "update", "delete"].includes(e.split(".").pop() ?? "")
+          ["create", "update", "delete"].includes(e.split(".").pop() ?? ""),
         )
       ) {
         fetchAllEvents();
@@ -95,23 +109,26 @@ export default function ConciergeScreen() {
     return () => {
       eventsSubscription();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.$id, connectedUser?.userId]);
 
   const timeSinceLastJointEvent = useMemo(() => {
-    const jointEvents = allEvents.filter((e) => e.jointEvent);
-    if (jointEvents.length === 0) return 30;
-    const sortedJointEvents = jointEvents.sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    const now = new Date();
+
+    const pastJointEvents = allEvents
+      .filter(
+        (event) =>
+          event.jointEvent && new Date(event.date).getTime() <= now.getTime(),
+      )
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    if (pastJointEvents.length === 0) return null;
+
+    const lastEventDate = new Date(pastJointEvents[0].date);
+
+    return Math.floor(
+      (now.getTime() - lastEventDate.getTime()) / (1000 * 60 * 60 * 24),
     );
-
-    const lastJointEventDate = new Date(sortedJointEvents[0].date);
-    const today = new Date();
-
-    const diffTime = Math.abs(today.getTime() - lastJointEventDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    return diffDays;
   }, [allEvents]);
 
   const upcomingSchedule = useMemo(() => {
@@ -122,7 +139,7 @@ export default function ConciergeScreen() {
     const futureEvents = allEvents.filter(
       (e) =>
         new Date(e.date).getTime() >= today.getTime() &&
-        new Date(e.date).getTime() <= thirtyDaysFromNow.getTime()
+        new Date(e.date).getTime() <= thirtyDaysFromNow.getTime(),
     );
     if (futureEvents.length === 0) {
       return "No upcoming events found in the next 30 days for either partner";
@@ -139,8 +156,8 @@ export default function ConciergeScreen() {
         const type = e.jointEvent
           ? "Joint"
           : e.userId === user?.$id
-          ? "My Event"
-          : "Partner Private";
+            ? "My Event"
+            : "Partner Private";
         return `Date: ${date}, Time: ${time}, Type: ${type}, Title: ${e.title}`;
       })
       .join("\n");
@@ -150,67 +167,86 @@ export default function ConciergeScreen() {
   const getConciergeResponse = async (query: string) => {
     setisTyping(true);
 
-    const systemPrompt =
-      'You are a friendly, insightful, and proactive relationship concierge service named "Dory". Your goal is to help a couple plan quality time together. Your responses should be warm, encouraging, and actionable.';
-
-  const userQuery = isFirstMessage.current
-    ? `My last joint event was ${timeSinceLastJointEvent} days ago
-    upcoming Schedule (next 30 days): 
-    ---
-    ${upcomingSchedule}
-    ---
-    User Message: ${query}`
-    : query;
-
-  isFirstMessage.current = false;
-
-const payload = {
-  contents: [
-    {
-      role: "user",
-      parts: [{ text: userQuery }],
-    },
-  ],
-  system_instruction: {
-    role: "system",
-    parts: [{ text: systemPrompt }],
-  },
-};
-
-
-    let resultText =
-      "Sorry, I couldn't connect with the service right now. Please try again.";
-
-    const MAX_RETRIES = 5;
-    for (let i = 0; i < MAX_RETRIES; i++) {
-      try {
-        const response = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (response.ok) {
-          const result = await response.json();
-          resultText =
-            result.candidates?.[0].content?.parts?.[0].text || resultText;
-          break;
+    const context = isFirstMessage.current
+      ? `${
+          timeSinceLastJointEvent === null
+            ? "We have no previous joint events recorded."
+            : `Our last joint event was ${timeSinceLastJointEvent} days ago.`
         }
-      } catch (error) {
-        if (i < MAX_RETRIES - 1) {
-          const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
-          await new Promise((resolve) => setTimeout(resolve, delay));
-        } else {
-          console.error("Gemini API call failed after max retries:", error);
-        }
+
+Upcoming Schedule (next 30 days):
+---
+${upcomingSchedule}
+---`
+      : "";
+
+    try {
+      const execution = await functions.createExecution(
+        CONCIERGE_FUNCTION_ID,
+        JSON.stringify({
+          action: "chat",
+          query,
+          context,
+        }),
+        false,
+        "/",
+        ExecutionMethod.POST,
+      );
+
+      if (execution.status !== "completed") {
+        throw new Error("Concierge  Function execution failed");
       }
-    }
 
-    setMessages((prev) => [...prev, { role: "concierge", text: resultText }]);
-    setisTyping(false);
+      const data = JSON.parse(execution.responseBody || "{}");
+
+      if (data.error === "limit_reached") {
+        await RevenueCatUI.presentPaywall();
+        await refreshQuota();
+        return;
+      }
+
+      if (data.error) {
+        console.error("Dory Function error:", data.error);
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "concierge",
+            text: "Something went wrong, Please try again",
+          },
+        ]);
+        return;
+      }
+
+      if (data.reply) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "concierge", text: data.reply },
+        ]);
+        isFirstMessage.current = false;
+        updateQuota(data.remaining, data.isPro);
+      }
+    } catch (err) {
+      console.error("Dory execution failed:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "concierge",
+          text: "Sorry, i couldn't connect with Dory right now. Please try again",
+        },
+      ]);
+    } finally {
+      setisTyping(false);
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!userInput.trim() || isTyping) return;
+  const handleSendMessage = async () => {
+    if (!userInput.trim() || isTyping || subLoading || quotaLoading) return;
+
+    if (!canSend) {
+      await RevenueCatUI.presentPaywall();
+      await refreshQuota();
+      return;
+    }
 
     const newMessage: Message[] = [
       ...messages,
@@ -222,7 +258,7 @@ const payload = {
 
     setTimeout(
       () => chatScrollViewRef.current?.scrollToEnd({ animated: true }),
-      100
+      100,
     );
     getConciergeResponse(query);
   };
@@ -299,18 +335,27 @@ const payload = {
                 placeholder="Ask Dory for a date idea or when you're free..."
                 placeholderTextColor="#666"
                 editable={!isTyping}
-                onSubmitEditing={handleSendMessage} // Allows sending via keyboard enter
+                onSubmitEditing={handleSendMessage}
               />
               <TouchableOpacity
                 style={conciergeStyles.sendButton}
                 onPress={handleSendMessage}
-                disabled={!userInput.trim() || isTyping}
+                disabled={
+                  !userInput.trim() || isTyping || subLoading || quotaLoading
+                }
               >
                 <MaterialCommunityIcons name="send" size={24} color="#fff" />
               </TouchableOpacity>
             </View>
             <Text style={conciergeStyles.statusText}>
-              Last joint event was {timeSinceLastJointEvent} days ago.
+              {isPro
+                ? "Pro: unlimited messages"
+                : `${remaining} free message${remaining === 1 ? "" : "s"} left`}
+            </Text>
+            <Text style={conciergeStyles.statusText}>
+              {timeSinceLastJointEvent === null
+                ? "No previous joint events recorded."
+                : `Last joint event was ${timeSinceLastJointEvent} days ago.`}
             </Text>
           </ScrollView>
         </TouchableWithoutFeedback>

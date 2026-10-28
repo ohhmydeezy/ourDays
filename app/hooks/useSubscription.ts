@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Purchases, { CustomerInfo } from "react-native-purchases";
 
-export function useSubsciption() {
+export function useSubscription() {
   const [isSubscribed, setisSubscribed] = useState(false);
   const [loading, setLoading] = useState(true);
 

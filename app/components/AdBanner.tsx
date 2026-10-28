@@ -4,14 +4,14 @@ import {
   BannerAdSize,
   TestIds,
 } from "react-native-google-mobile-ads";
-import { useSubsciption } from "../hooks/useSubscription";
+import { useSubscription } from "../hooks/useSubscription";
 
 interface AdBannerProps {
   style?: StyleProp<ViewStyle>;
 }
 
 export default function AdBanner({ style }: AdBannerProps) {
-  const { isSubscribed, loading } = useSubsciption();
+  const { isSubscribed, loading } = useSubscription();
 
   if (loading || isSubscribed) return null;
 
