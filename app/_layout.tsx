@@ -2,11 +2,16 @@ import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { EventsDataProvider } from "@/lib/events-context";
 import { Slot, useRouter, useSegments } from "expo-router";
 import { usePushNotifications } from "@/app/hooks/usePushNotifications";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PaperProvider } from "react-native-paper";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import * as SplashScreen from "expo-splash-screen";
+import AnimatedSplash from "./components/animatedSplash";
+import { View } from "react-native";
+
+SplashScreen.preventAutoHideAsync();
 
 if (__DEV__) Purchases.setLogLevel(LOG_LEVEL.DEBUG);
 Purchases.configure({
@@ -65,13 +70,42 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const [showSplash, setShowSplash] = useState(true);
+  const [nativeSplashHidden, setNativeSplashHidden] = useState(false);
+
+  useEffect(() => {
+    SplashScreen.hideAsync()
+      .then(() => setNativeSplashHidden(true))
+      .catch((error) => {
+        console.log("Splash screen error:", error);
+        setNativeSplashHidden(true);
+      });
+  }, []);
+
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <AuthProvider>
         <EventsDataProvider>
           <PaperProvider>
             <SafeAreaProvider>
-              <AuthGate />
+              <View style={{ flex: 1 }}>
+                <AuthGate />
+                {showSplash && nativeSplashHidden && (
+                  <View
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      zIndex: 100,
+                      backgroundColor: "#eafd71",
+                    }}
+                  >
+                    <AnimatedSplash onFinish={() => setShowSplash(false)} />
+                  </View>
+                )}
+              </View>
             </SafeAreaProvider>
           </PaperProvider>
         </EventsDataProvider>
