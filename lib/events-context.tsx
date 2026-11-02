@@ -13,7 +13,7 @@ import {
   EVENTS_ID,
   USER_COLLECTION_ID,
 } from "./appwrite";
-import { Query } from "appwrite";
+import { Query } from "react-native-appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { Events } from "@/types/database.type";
 import { Alert } from "react-native";
@@ -22,6 +22,7 @@ interface EventsContextType {
   myEvents: Events[];
   partnerEvents: Events[];
   pendingEvents: Events[];
+  isUpdatingEvent: boolean;
   fetchMyEvents: () => Promise<void>;
   fetchPartnerEvents: () => Promise<void>;
   fetchPendingEvents: () => Promise<void>;
@@ -44,8 +45,12 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   const [partnerEvents, setPartnerEvents] = useState<Events[]>([]);
   const [pendingEvents, setPendingEvents] = useState<Events[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdatingEvent, setIsUpdatingEvent] = useState(false);
 
   const isMounted = useRef(true);
+  const updatingEventRef = useRef(false);
+  const userId = user?.$id;
+  const partnerId = connectedUser?.userId;
 
   useEffect(() => {
     isMounted.current = true;
@@ -62,65 +67,69 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   //Retrieve events
 
   const fetchMyEvents = useCallback(async () => {
-    if (!user?.$id) return;
+    if (!userId) return;
     setIsLoading(true);
     try {
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
         Query.notEqual("status", "declined"),
       ]);
       if (!isMounted.current) return;
       setMyEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching my events:", error);
-      logAndAlertError("Error fetching my events:", error);
-      setMyEvents([]);
+      if (isMounted.current) {
+        setMyEvents([]);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
-  }, [user?.$id]);
+  }, [userId]);
 
   // retrieve connected partner if a connected partner exists
 
   const fetchPartnerEvents = useCallback(async () => {
-    if (!connectedUser?.userId) return;
+    if (!partnerId) {
+      setPartnerEvents([]);
+      return;
+    }
     try {
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
-        Query.equal("userId", connectedUser.userId),
+        Query.equal("userId", partnerId),
         Query.notEqual("status", "declined"),
       ]);
       if (!isMounted.current) return;
       setPartnerEvents(response.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching partner events:", error);
-      logAndAlertError("Error fetching partner events:", error);
-      setPartnerEvents([]);
+
+      if (isMounted.current) {
+        setPartnerEvents([]);
+      }
     }
-  }, [connectedUser?.userId]);
+  }, [partnerId]);
 
   // Pending events for notification
 
   const fetchPendingEvents = useCallback(async () => {
-    if (!user?.$id) return;
+    if (!userId) return;
 
     try {
       const result = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
         Query.equal("status", "pending"),
-        Query.equal("recipientId", user.$id),
+        Query.equal("recipientId", userId),
       ]);
       if (!isMounted.current) return;
       setPendingEvents(result.documents as unknown as Events[]);
     } catch (error) {
       console.error("Error fetching pending events:", error);
-      Alert.alert(
-        "Error",
-        "Failed to load events. Check your Appwrite console for index errors.",
-      );
-      setPendingEvents([]);
-    } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setPendingEvents([]);
+      }
     }
-  }, [user?.$id]);
+  }, [userId]);
 
   const notifyEventStatus = async (
     recipientId: string,
@@ -196,93 +205,124 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
   // Handle accept event action on pending events
 
   const handleAcceptEvent = async (event: Events) => {
-    if (!user) return;
+    if (!userId || updatingEventRef.current) return;
+
+    updatingEventRef.current = true;
+    setIsUpdatingEvent(true);
 
     try {
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "confirmed",
       });
 
-      // notify the person who created the event
-      await notifyEventStatus(event.userId, event.title, "confirmed");
+      await Promise.all([
+        fetchPendingEvents(),
+        fetchMyEvents(),
+        fetchPartnerEvents(),
+      ]);
 
-      if (!isMounted.current) return;
-      await fetchPendingEvents();
-      await fetchMyEvents();
-      await fetchPartnerEvents();
+      void notifyEventStatus(event.userId, event.title, "confirmed");
     } catch (error) {
       console.error("Error accepting event:", error);
+      Alert.alert(
+        "Error",
+        "We couldn't accept this invitation. Please try again.",
+      );
+      throw error;
+    } finally {
+      updatingEventRef.current = false;
+      if (isMounted.current) {
+        setIsUpdatingEvent(false);
+      }
     }
   };
 
   // Handle decline event action on pending events
 
   const handleDeclineEvent = async (event: Events) => {
-    if (!user) return;
+    if (!userId || updatingEventRef.current) return;
+
+    updatingEventRef.current = true;
+    setIsUpdatingEvent(true);
 
     try {
       await databases.updateDocument(DATABASE_ID, EVENTS_ID, event.$id, {
         status: "declined",
       });
 
-      // notify the person who created the event
-      await notifyEventStatus(event.userId, event.title, "declined");
+      await Promise.all([
+        fetchPendingEvents(),
+        fetchMyEvents(),
+        fetchPartnerEvents(),
+      ]);
 
-      if (!isMounted.current) return;
-      await fetchPendingEvents();
-      await fetchMyEvents();
-      await fetchPartnerEvents();
+      void notifyEventStatus(event.userId, event.title, "declined");
     } catch (error) {
       console.error("Error declining event:", error);
+      Alert.alert(
+        "Error",
+        "We couldn't decline this invitation. Please try again.",
+      );
+      throw error;
+    } finally {
+      updatingEventRef.current = false;
+      if (isMounted.current) {
+        setIsUpdatingEvent(false);
+      }
     }
   };
 
   // Initial fetch of events
   useEffect(() => {
-    if (!user?.$id) return;
+    if (!userId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMyEvents();
     fetchPartnerEvents();
     fetchPendingEvents();
-  }, [user?.$id, fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
+  }, [userId, fetchMyEvents, fetchPartnerEvents, fetchPendingEvents]);
 
   // Realtime subscription
   useEffect(() => {
-    if (!user?.$id) return;
+    if (!userId) return;
 
     const eventsChannel = `databases.${DATABASE_ID}.collections.${EVENTS_ID}.documents`;
 
-    const eventsSubscription = client.subscribe(eventsChannel, (response) => {
+    const unsubscribe = client.subscribe(eventsChannel, (response) => {
       if (!isMounted.current) return;
 
-      const payload = response.payload as any;
+      const payload = response.payload as Partial<Events>;
+
       if (!payload) return;
 
       const isRelevant =
-        payload?.userId === user.$id || payload?.recipientId === user.$id;
+        payload?.userId === userId ||
+        payload?.recipientId === userId ||
+        (partnerId != null && payload.userId === partnerId);
 
-      if (
-        isRelevant &&
-        response.events.some((e) =>
-          [
-            "databases.*.collections.*.documents.*.create",
-            "databases.*.collections.*.documents.*.update",
-            "databases.*.collections.*.documents.*.delete",
-          ].some((pattern) => e.includes(pattern.replace("*", ""))),
-        )
-      ) {
-        fetchMyEvents();
-        fetchPendingEvents();
-        if (connectedUser?.userId) fetchPartnerEvents();
+      const hasChanged = response.events.some((event) => {
+        const action = event.split(".").pop();
+
+        return (
+          action === "create" || action === "update" || action === "delete"
+        );
+      });
+
+      if (isRelevant && hasChanged) {
+        void Promise.all([
+          fetchMyEvents(),
+          fetchPendingEvents(),
+          fetchPartnerEvents(),
+        ]);
       }
     });
 
     return () => {
-      eventsSubscription();
+      unsubscribe();
     };
   }, [
-    user?.$id,
-    connectedUser?.userId,
+    userId,
+    partnerId,
     fetchMyEvents,
     fetchPartnerEvents,
     fetchPendingEvents,
@@ -301,6 +341,7 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
         handleAcceptEvent,
         handleDeclineEvent,
         isLoading,
+        isUpdatingEvent,
       }}
     >
       {children}

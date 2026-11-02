@@ -7,11 +7,12 @@ import { useState } from "react";
 import { View, StyleSheet } from "react-native";
 import { Text, Button } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
-import RevenueCatUI from "react-native-purchases-ui";
+import { usePaywall } from "@/app/hooks/usePaywall";
 import { useSubscription } from "@/app/hooks/useSubscription";
 
 export default function ProfileScreen() {
   const { user, connectedUser, signOut, refreshUser } = useAuth();
+  const {openPaywall, isProcessing} = usePaywall()
   const [shareCode, setShareCode] = useState<string | null>(null);
   const { isSubscribed } = useSubscription();
 
@@ -27,7 +28,7 @@ export default function ProfileScreen() {
       <AdBanner style={styles.adBanner} />
       <View style={{ justifyContent: "center" }}>
         <View style={styles.header}>
-          <Text style={{ color: "white", padding: 12, fontWeight: "bold" }}>
+          <Text style={styles.headerText}>
             Profile
           </Text>
         </View>
@@ -142,7 +143,8 @@ export default function ProfileScreen() {
             style={styles.upgradeButton}
             labelStyle={styles.upgradeLabel}
             contentStyle={{ paddingVertical: 4 }}
-            onPress={() => RevenueCatUI.presentPaywall()}
+            onPress={() => void openPaywall()}
+            disabled={isProcessing}
             icon={({ size }) => (
               <MaterialCommunityIcons name="crown" color="#000" size={size} />
             )}
@@ -234,9 +236,11 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#555555",
     alignItems: "center",
-    marginTop: 24,
     borderRadius: 25,
+    padding: 12,
+    margin: 16,
   },
+  headerText: { color: "white", fontSize: 20, fontWeight: "bold" },
   shareContainer: {
     backgroundColor: "#7381FF",
     padding: 18,

@@ -1,8 +1,4 @@
-import {
-  DATABASE_ID,
-  databases,
-  EVENTS_ID,
-} from "../../lib/appwrite";
+import { DATABASE_ID, databases, EVENTS_ID } from "../../lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
 import { useMemo, useState } from "react";
 import {
@@ -29,6 +25,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useEventsData } from "@/lib/events-context";
 import { ScrollView } from "react-native-gesture-handler";
 import AdBanner from "../components/AdBanner";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 export default function AddEventScreen() {
   const [title, setTitle] = useState("");
@@ -39,72 +36,86 @@ export default function AddEventScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   const { user, connectedUser } = useAuth();
-  const { fetchMyEvents, fetchPartnerEvents, notifyEventCreated } = useEventsData();
+  const { fetchMyEvents, fetchPartnerEvents, notifyEventCreated } =
+    useEventsData();
   const theme = useTheme();
 
   const isPartnerAvailable = useMemo(
     () => !!connectedUser?.userId,
-    [connectedUser?.userId]
+    [connectedUser?.userId],
   );
 
-
-
-const handleSubmit = async () => {
-  if (!user) return setError("Unauthenticated User");
-  if (isSubmitted) return;
-
-  setError("");
-  setSuccess("");
-  setIsSubmitted(true);
-
-  const documentData: any = {
-    userId: user.$id,
-    title,
-    details,
-    location,
-    date: dateTime.toISOString(),
-    time: dateTime.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    }),
-    jointEvent,
-    status: jointEvent ? "pending" : "confirmed",
-  };
-
-  try {
-    if (jointEvent && connectedUser?.userId) {
-      documentData.recipientId = connectedUser.userId;
-      await notifyEventCreated(connectedUser.userId, title);
+  const handleSubmit = async () => {
+    if (!user) {
+      setError("Unauthenticated User");
+      return;
     }
 
-    await databases.createDocument(
-      DATABASE_ID,
-      EVENTS_ID,
-      ID.unique(),
-      documentData,
-    );
+    if (isSubmitted) return;
 
-    await fetchMyEvents();
-    if (connectedUser?.userId) await fetchPartnerEvents();
+    if (!title.trim()) {
+      setError("Please enter an event title.");
+      return;
+    }
 
-    setTitle("");
-    setDetails("");
-    setLocation("");
-    setDateTime(new Date());
-    setSuccess("Event successfully created!");
-    setTimeout(() => router.back(), 1000);
-  } catch (err) {
-    console.error("Error creating event:", err);
-    setError(err instanceof Error ? err.message : "Error creating Event");
-  } finally {
-    setIsSubmitted(false);
-  }
-};
+    if (jointEvent && !connectedUser?.userId) {
+      setError("Please connect with your partner first.");
+      return;
+    }
+
+    setError("");
+    setIsSubmitted(true);
+
+    const documentData: any = {
+      userId: user.$id,
+      title,
+      details,
+      location,
+      date: dateTime.toISOString(),
+      time: dateTime.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      }),
+      jointEvent,
+      status: jointEvent ? "pending" : "confirmed",
+      ...(jointEvent && connectedUser?.userId
+        ? { recipientId: connectedUser.userId }
+        : {}),
+    };
+
+    try {
+      await databases.createDocument(
+        DATABASE_ID,
+        EVENTS_ID,
+        ID.unique(),
+        documentData,
+      );
+
+      await Promise.all([
+        fetchMyEvents(),
+        ...(connectedUser?.userId ? [fetchPartnerEvents()] : []),
+      ]);
+
+      if (jointEvent && connectedUser?.userId) {
+        void notifyEventCreated(connectedUser.userId, title.trim());
+      }
+
+      setTitle("");
+      setDetails("");
+      setLocation("");
+      setDateTime(new Date());
+      router.back();
+    } catch (err) {
+      console.error("Error creating event:", err);
+      setError(err instanceof Error ? err.message : "Error creating Event");
+    } finally {
+      setIsSubmitted(false);
+    }
+  };
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
@@ -121,7 +132,7 @@ const handleSubmit = async () => {
           >
             <AdBanner />
             <View style={styles.header}>
-              <Text style={{ color: "white", padding: 12 }}>New Event</Text>
+              <Text style={styles.headerText}>Add Event</Text >
             </View>
 
             <View style={styles.formContainer}>
@@ -146,8 +157,8 @@ const handleSubmit = async () => {
                             selectedDate.getMonth(),
                             selectedDate.getDate(),
                             prev.getHours(),
-                            prev.getMinutes()
-                          )
+                            prev.getMinutes(),
+                          ),
                       )
                     }
                   />
@@ -193,8 +204,8 @@ const handleSubmit = async () => {
                             prev.getMonth(),
                             prev.getDate(),
                             selectedDate.getHours(),
-                            selectedDate.getMinutes()
-                          )
+                            selectedDate.getMinutes(),
+                          ),
                       )
                     }
                   />
@@ -265,11 +276,10 @@ const handleSubmit = async () => {
                 </TouchableOpacity>
               </View>
 
-              {/* Submit Button */}
               <Button
                 mode="contained"
                 onPress={handleSubmit}
-                disabled={!title}
+                disabled={!title || isSubmitted}
                 style={{ marginTop: 24 }}
               >
                 Create
@@ -286,22 +296,16 @@ const handleSubmit = async () => {
                   {error}
                 </Text>
               )}
-              {success && (
-                <Text
-                  style={{
-                    color: theme.colors.primary,
-                    marginTop: 12,
-                    fontWeight: "bold",
-                    textAlign: "center",
-                  }}
-                >
-                  {success}
-                </Text>
-              )}
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
+      <LoadingOverlay
+        visible={isSubmitted}
+        message={
+          jointEvent ? "Sending your invitation..." : "Creating your event..."
+        }
+      />
     </SafeAreaView>
   );
 }
@@ -328,9 +332,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#555555",
     alignItems: "center",
     borderRadius: 25,
-    marginBottom: 20,
-    marginTop: 10,
+    padding: 12,
+    margin: 16,
   },
+  headerText: { color: "white", fontSize: 20, fontWeight: "bold" },
   input: {
     marginBottom: 16,
     backgroundColor: "transparent",
@@ -350,7 +355,8 @@ const styles = StyleSheet.create({
     padding: 8,
     color: "#999",
   },
-  text: { 
-    color: "#000", 
-    fontWeight: "bold" },
+  text: {
+    color: "#000",
+    fontWeight: "bold",
+  },
 });

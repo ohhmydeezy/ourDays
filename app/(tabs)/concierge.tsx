@@ -1,6 +1,6 @@
 import { useAuth } from "@/lib/auth-context";
 import { client, DATABASE_ID, databases, EVENTS_ID } from "@/lib/appwrite";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -18,9 +18,10 @@ import { ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import AdBanner from "../components/AdBanner";
-import RevenueCatUI from "react-native-purchases-ui";
+import { usePaywall } from "../hooks/usePaywall";
 import { useSubscription } from "../hooks/useSubscription";
 import { useChatQuota } from "../hooks/useChatQuota";
+import { useFocusEffect } from "expo-router";
 
 interface Message {
   role: "user" | "concierge";
@@ -32,6 +33,7 @@ const CONCIERGE_FUNCTION_ID = process.env.EXPO_PUBLIC_CONCIERGE_FUNCTION_ID!;
 
 export default function ConciergeScreen() {
   const { user, connectedUser } = useAuth();
+  const { openPaywall } = usePaywall();
   const { isSubscribed, loading: subLoading } = useSubscription();
   const {
     remaining,
@@ -43,6 +45,7 @@ export default function ConciergeScreen() {
   } = useChatQuota(isSubscribed);
   const [isTyping, setisTyping] = useState(false);
   const [allEvents, setAllEvents] = useState<Events[]>([]);
+  const [currentTime, setCurrentTime] = useState<number | null>(null);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "concierge",
@@ -52,21 +55,24 @@ export default function ConciergeScreen() {
   const [userInput, setUserInput] = useState("");
   const chatScrollViewRef = useRef<ScrollView>(null);
   const isFirstMessage = useRef(true);
+  const userId = user?.$id;
+  const partnerId = connectedUser?.userId;
 
-  const fetchAllEvents = async () => {
-    if (!user?.$id) return;
+  const fetchAllEvents = useCallback(async () => {
+    if (!userId) return;
+
     try {
       const response = await databases.listDocuments(DATABASE_ID, EVENTS_ID, [
-        Query.equal("userId", user.$id),
+        Query.equal("userId", userId),
       ]);
       const myEvents = response.documents as unknown as Events[];
 
       let partnerEvents: Events[] = [];
-      if (connectedUser?.userId) {
+      if (partnerId) {
         const partnerResponse = await databases.listDocuments(
           DATABASE_ID,
           EVENTS_ID,
-          [Query.equal("userId", connectedUser.userId)],
+          [Query.equal("userId", partnerId)],
         );
         partnerEvents = partnerResponse.documents as unknown as Events[];
       }
@@ -74,27 +80,27 @@ export default function ConciergeScreen() {
     } catch (error) {
       console.error("Error fetching events for concierge context:", error);
     }
-  };
+  }, [userId, partnerId]);
 
   useEffect(() => {
-    if (!user?.$id) return;
+    if (!userId) return;
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchAllEvents();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.$id, connectedUser?.userId]);
+    const loadEvents = async () => {
+      await fetchAllEvents();
+    };
+    void loadEvents();
+  }, [userId, fetchAllEvents]);
 
   useEffect(() => {
-    if (!user?.$id) return;
+    if (!userId) return;
 
     const eventsChannel = `databases.${DATABASE_ID}.collections.${EVENTS_ID}.documents`;
 
     const eventsSubscription = client.subscribe(eventsChannel, (response) => {
       const payload = response.payload as any;
       const isRelevant =
-        payload?.userId === user.$id ||
-        (connectedUser?.userId != null &&
-          payload.userId === connectedUser.userId);
+        payload?.userId === userId ||
+        (partnerId != null && payload.userId === partnerId);
 
       if (
         isRelevant &&
@@ -109,27 +115,36 @@ export default function ConciergeScreen() {
     return () => {
       eventsSubscription();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.$id, connectedUser?.userId]);
+  }, [userId, partnerId, fetchAllEvents]);
+
+  useFocusEffect(
+    useCallback(() => {
+      setCurrentTime(Date.now);
+    }, []),
+  );
 
   const timeSinceLastJointEvent = useMemo(() => {
-    const now = new Date();
+    if (currentTime === null) return null;
 
     const pastJointEvents = allEvents
-      .filter(
-        (event) =>
-          event.jointEvent && new Date(event.date).getTime() <= now.getTime(),
-      )
+      .filter((event) => {
+        const eventTime = new Date(event.date).getTime();
+
+        return (
+          event.jointEvent === true &&
+          event.status === "confirmed" &&
+          Number.isFinite(eventTime) &&
+          eventTime <= currentTime
+        );
+      })
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     if (pastJointEvents.length === 0) return null;
 
-    const lastEventDate = new Date(pastJointEvents[0].date);
+    const lastEventTime = new Date(pastJointEvents[0].date).getTime();
 
-    return Math.floor(
-      (now.getTime() - lastEventDate.getTime()) / (1000 * 60 * 60 * 24),
-    );
-  }, [allEvents]);
+    return Math.floor((currentTime - lastEventTime) / (1000 * 60 * 60 * 24));
+  }, [allEvents, currentTime]);
 
   const upcomingSchedule = useMemo(() => {
     const today = new Date();
@@ -137,9 +152,18 @@ export default function ConciergeScreen() {
     thirtyDaysFromNow.setDate(today.getDate() + 30);
 
     const futureEvents = allEvents.filter(
-      (e) =>
-        new Date(e.date).getTime() >= today.getTime() &&
-        new Date(e.date).getTime() <= thirtyDaysFromNow.getTime(),
+      (e) => {
+        const eventTime = new Date(e.date).getTime()
+
+        return (
+          e.status === "confirmed" &&
+          Number.isFinite(eventTime) &&
+          eventTime >= today.getTime() &&
+          eventTime <= thirtyDaysFromNow.getTime()
+        )
+      }
+
+
     );
     if (futureEvents.length === 0) {
       return "No upcoming events found in the next 30 days for either partner";
@@ -148,21 +172,21 @@ export default function ConciergeScreen() {
     const scheduleString = futureEvents
       .map((e) => {
         const date = new Date(e.date).toLocaleDateString();
-        const time = new Date(e.time).toLocaleTimeString("en-US", {
+        const time = new Date(e.time).toLocaleTimeString("en-GB", {
           hour: "2-digit",
           minute: "2-digit",
           hour12: true,
         });
         const type = e.jointEvent
           ? "Joint"
-          : e.userId === user?.$id
+          : e.userId === userId
             ? "My Event"
             : "Partner Private";
         return `Date: ${date}, Time: ${time}, Type: ${type}, Title: ${e.title}`;
       })
       .join("\n");
     return scheduleString;
-  }, [allEvents, user?.$id]);
+  }, [allEvents, userId]);
 
   const getConciergeResponse = async (query: string) => {
     setisTyping(true);
@@ -200,8 +224,12 @@ ${upcomingSchedule}
       const data = JSON.parse(execution.responseBody || "{}");
 
       if (data.error === "limit_reached") {
-        await RevenueCatUI.presentPaywall();
-        await refreshQuota();
+        const activated = await openPaywall();
+
+        if (activated) {
+          await refreshQuota();
+        }
+
         return;
       }
 
@@ -243,8 +271,11 @@ ${upcomingSchedule}
     if (!userInput.trim() || isTyping || subLoading || quotaLoading) return;
 
     if (!canSend) {
-      await RevenueCatUI.presentPaywall();
-      await refreshQuota();
+      const activated = await openPaywall();
+      if (activated) {
+        await refreshQuota();
+      }
+
       return;
     }
 

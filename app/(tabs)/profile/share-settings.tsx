@@ -6,48 +6,62 @@ import { router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import LoadingOverlay from "@/app/components/LoadingOverlay";
 
 export default function ShareSettingsScreen() {
   const [shareCode, setShareCode] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Just a moment...");
   const { linkAccount } = useAuth();
   const theme = useTheme();
 
   const handleSubmit = async () => {
     if (!shareCode) return;
+
+    setLoadingMessage("Linking you to your Partner...");
+    setIsLoading(true);
+
     try {
       const result = await linkAccount(shareCode);
       if (result) {
         setError(result);
         return;
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     } catch (error) {
+      console.error("Error connecting accounts: ", error)
       setError("Failed to submit Share Code");
+      setIsLoading(false);
+    } finally {
+      setError("");
+      alert("Account linked successfully!");
+      setIsLoading(false);
+      router.back();
     }
-    setError("");
-    alert("Account linked successfully!");
-    router.back();
   };
 
   return (
-    <SafeAreaView edges={[ "bottom"]} style={styles.container}>
+    <SafeAreaView edges={["bottom"]} style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={32}
-            color="#1f1f1fff"
-          />
-        </TouchableOpacity>
-        <View style={styles.header}>
-          <Text style={[styles.headerText, { color: "white", padding: 8, fontWeight: "bold" }]}>
-            Calender Sync
-          </Text>
+        <View style={styles.sideContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={32}
+              color="#1f1f1f"
+            />
+          </TouchableOpacity>
         </View>
+
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Share Settings</Text>
+        </View>
+
+        <View style={styles.sideContainer} />
       </View>
 
       <View style={styles.shareContainer}>
@@ -69,12 +83,18 @@ export default function ShareSettingsScreen() {
           onChangeText={setShareCode}
           style={styles.input}
         />
-        <Button mode="contained" textColor="#000" onPress={handleSubmit} disabled={!shareCode}>
+        <Button
+          mode="contained"
+          textColor="#000"
+          onPress={handleSubmit}
+          disabled={!shareCode}
+        >
           Sync Calender
         </Button>
 
         {error && <Text style={{ color: theme.colors.error }}>{error}</Text>}
       </View>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 }
@@ -86,15 +106,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   topBar: {
+    width: "100%",
+    flexDirection: "row",
     alignItems: "center",
-    flexDirection: "row"
+    justifyContent: "center",
+    minHeight: 64,
+    position: "relative",
+  },
+  sideContainer: {
+    width: 56,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    marginRight: 36,
   },
   header: {
     backgroundColor: "#555555",
     paddingHorizontal: 24,
+    paddingVertical: 8,
     borderRadius: 50,
   },
   headerText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 18,
     textAlign: "center",
   },
   input: {
@@ -108,9 +142,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButton: {
-    padding: 15,
-    marginRight: 28,
-    alignItems: "flex-start",
-    color: "#000",
+    padding: 12,
   },
 });

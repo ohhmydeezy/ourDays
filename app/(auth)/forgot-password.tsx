@@ -34,7 +34,6 @@ export default function ForgotPassword() {
         url: "https://ourdays-reset.appwrite.network",
       });
       setSuccess(true);
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (err) {
       console.log("Recovery request error:", err);
       if (err instanceof Error) {

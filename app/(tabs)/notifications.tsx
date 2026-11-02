@@ -1,26 +1,34 @@
 import { useEventsData } from "@/lib/events-context";
 import { Events } from "@/types/database.type";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import {
-  View,
-  StyleSheet,
-  FlatList,
-  ActivityIndicator,
-} from "react-native";
+import { View, StyleSheet, FlatList } from "react-native";
 import { Swipeable } from "react-native-gesture-handler";
 import { Text } from "react-native-paper";
 import { SafeAreaView } from "react-native-safe-area-context";
 import AdBanner from "../components/AdBanner";
+import LoadingOverlay from "../components/LoadingOverlay";
+import { useState } from "react";
 
 export default function NotificationsScreen() {
   const {
-    isLoading,
     pendingEvents,
+    isUpdatingEvent,
     handleAcceptEvent,
     handleDeclineEvent,
     fetchPendingEvents,
   } = useEventsData();
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const refreshNotifications = async () => {
+    setIsRefreshing(true);
+
+    try {
+      await fetchPendingEvents();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const renderPendingEvent = ({ item: event }: { item: Events }) => (
     <Swipeable
@@ -46,8 +54,16 @@ export default function NotificationsScreen() {
           <Text style={styles.actionText}>Decline</Text>
         </View>
       )}
-      onSwipeableLeftOpen={() => handleAcceptEvent(event)}
-      onSwipeableRightOpen={() => handleDeclineEvent(event)}
+      onSwipeableLeftOpen={() => {
+        void handleAcceptEvent(event).catch((error) => {
+          console.error("Accept swipe failed:", error);
+        });
+      }}
+      onSwipeableRightOpen={() => {
+        void handleDeclineEvent(event).catch((error) => {
+          console.error("Decline swipe failed:", error);
+        });
+      }}
     >
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{event.title}</Text>
@@ -75,26 +91,30 @@ export default function NotificationsScreen() {
       </View>
 
       <View style={styles.content}>
-        {isLoading ? (
-          <ActivityIndicator size="large" color="#555555" />
-        ) : pendingEvents.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <MaterialCommunityIcons name="bell-off" size={48} color="#999" />
-            <Text style={styles.emptyText}>
-              You&apos;re all caught up! No pending events.
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={pendingEvents}
-            keyExtractor={(item) => item.$id}
-            renderItem={renderPendingEvent}
-            contentContainerStyle={{ paddingBottom: 20 }}
-            refreshing={isLoading}
-            onRefresh={() => fetchPendingEvents()}
-          />
-        )}
+        <FlatList
+          data={pendingEvents}
+          keyExtractor={(item) => item.$id}
+          renderItem={renderPendingEvent}
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingBottom: 20,
+          }}
+          refreshing={isRefreshing}
+          onRefresh={() => void refreshNotifications()}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <MaterialCommunityIcons name="bell-off" size={48} color="#999" />
+              <Text style={styles.emptyText}>
+                You&apos;re all caught up! No pending events.
+              </Text>
+            </View>
+          }
+        />
       </View>
+      <LoadingOverlay
+        visible={isUpdatingEvent}
+        message="Updating your shared calendar..."
+      />
     </SafeAreaView>
   );
 }
@@ -107,7 +127,6 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 12,
     margin: 16,
-
   },
   adBanner: {
     marginVertical: 12,

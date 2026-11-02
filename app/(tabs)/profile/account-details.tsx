@@ -13,12 +13,14 @@ import {
   USER_COLLECTION_ID,
 } from "@/lib/appwrite";
 import { Query } from "react-native-appwrite";
+import LoadingOverlay from "@/app/components/LoadingOverlay";
 
 export default function AccountDetailsScreen() {
   const { user, connectedUser, refreshUser, unlinkAccount } = useAuth();
   const [firstName, setFirstName] = useState(user?.prefs.firstName);
   const [surname, setSurname] = useState(user?.prefs.surname);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState("Just a moment..");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [confirmUnlink, setConfirmUnlink] = useState(false);
@@ -28,9 +30,13 @@ export default function AccountDetailsScreen() {
     return Math.random().toString(36).substring(2, 8).toUpperCase();
   };
 
-
   const refreshShareCode = async () => {
-    if (!user) return;
+    if (!user || isLoading) return;
+
+    setLoadingMessage("Generating a new share code...");
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
 
     try {
       const newCode = generateShareCode();
@@ -38,7 +44,7 @@ export default function AccountDetailsScreen() {
       const userDocs = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
+        [Query.equal("userId", user.$id)],
       );
 
       if (!userDocs.documents.length) {
@@ -53,7 +59,7 @@ export default function AccountDetailsScreen() {
         {
           isConnected: false,
           connectedTo: "",
-        }
+        },
       );
 
       const currentPrefs = await account.getPrefs();
@@ -66,6 +72,7 @@ export default function AccountDetailsScreen() {
       await account.updatePrefs(newPrefs);
 
       await refreshUser();
+      setSuccess("Share code updated!");
     } catch (error) {
       console.error("Error refreshing shareCode:", error);
       setError("Problem refreshing shareCode");
@@ -85,6 +92,7 @@ export default function AccountDetailsScreen() {
       return;
     }
 
+    setLoadingMessage("Saving your changes...");
     setIsLoading(true);
     setError("");
 
@@ -92,7 +100,7 @@ export default function AccountDetailsScreen() {
       const userDocs = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
+        [Query.equal("userId", user.$id)],
       );
 
       if (!userDocs.documents.length) {
@@ -108,7 +116,7 @@ export default function AccountDetailsScreen() {
         {
           firstName: newFirstName,
           surname: newSurname,
-        }
+        },
       );
 
       const currentPrefs = await account.getPrefs();
@@ -130,50 +138,55 @@ export default function AccountDetailsScreen() {
     }
   };
 
-    const handleUnlink = async () => {
-      if (!user || !connectedUser || !unlinkAccount || isLoading) return;
+  const handleUnlink = async () => {
+    if (!user || !connectedUser || !unlinkAccount || isLoading) return;
 
-      setIsLoading(true);
-      setError("");
-      setSuccess("");
+    setLoadingMessage("Unlinking your accounts...");
 
-      // This calls the function added to auth-context.tsx
+    setIsLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
       const result = await unlinkAccount(connectedUser.userId);
 
       if (result) {
         setError(result);
       } else {
         setSuccess(
-          `Successfully unlinked from ${connectedUser.firstName} ${connectedUser.surname}.`
+          `Successfully unlinked from ${connectedUser.firstName} ${connectedUser.surname}.`,
         );
         setConfirmUnlink(false);
       }
+    } catch (error) {
+      console.error("failed to unlink account:", error);
+      setError("Failed to unlink account. Please try again");
+    } finally {
       setIsLoading(false);
-    };
+    }
+  };
 
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={32}
-            color="#1f1f1fff"
-          />
-        </TouchableOpacity>
-        <View style={styles.header}>
-          <Text
-            style={[
-              styles.headerText,
-              { color: "white", padding: 8, fontWeight: "bold" },
-            ]}
+        <View style={styles.sideContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
           >
-            Account Details
-          </Text>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={32}
+              color="#1f1f1f"
+            />
+          </TouchableOpacity>
         </View>
+
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Account Details</Text>
+        </View>
+
+        <View style={styles.sideContainer} />
       </View>
       <View style={styles.info}>
         <Text style={styles.keyInfo}>Account ID: {user?.$id}</Text>
@@ -186,7 +199,8 @@ export default function AccountDetailsScreen() {
             mode="text"
             style={styles.button}
             compact={true}
-            onPress={refreshShareCode}
+            disabled={isLoading}
+            onPress={() => void refreshShareCode}
           >
             <MaterialCommunityIcons
               name="refresh"
@@ -261,7 +275,7 @@ export default function AccountDetailsScreen() {
                 <Button
                   mode="contained"
                   onPress={handleUnlink}
-                  loading={isLoading}
+                  disabled={isLoading}
                   style={[
                     styles.confirmationButton,
                     { backgroundColor: theme.colors.error },
@@ -305,6 +319,7 @@ export default function AccountDetailsScreen() {
           </Text>
         )}
       </View>
+      <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 }
@@ -315,16 +330,30 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: "white",
   },
+  sideContainer: {
+    width: 56,
+    justifyContent: "center",
+    alignItems: "flex-start",
+    marginRight: 36
+  },
   topBar: {
-    alignItems: "center",
+    width: "100%",
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 64,
+    position: "relative",
   },
   header: {
     backgroundColor: "#555555",
     paddingHorizontal: 24,
+    paddingVertical: 8,
     borderRadius: 50,
   },
   headerText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 18,
     textAlign: "center",
   },
   input: {
@@ -340,15 +369,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   backButton: {
-    padding: 15,
-    marginRight: 28,
-    alignItems: "flex-start",
-    color: "#000",
+    padding: 12,
   },
   keyInfo: {
     fontWeight: "bold",
     padding: 4,
-    color: "#000"
+    color: "#000",
   },
   info: {
     textAlign: "center",
@@ -390,7 +416,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: "center",
     marginBottom: 8,
-    color:"#000"
+    color: "#000",
   },
   confirmationRow: {
     flexDirection: "row",

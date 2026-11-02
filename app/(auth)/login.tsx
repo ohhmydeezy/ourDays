@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Button, Text, TextInput } from "react-native-paper";
 import { ScrollView } from "react-native-gesture-handler";
+import LoadingOverlay from "../components/LoadingOverlay";
 
 export default function AuthScreen() {
   const [isSignUp, setIsSignUp] = useState<boolean>(false);
@@ -21,6 +22,7 @@ export default function AuthScreen() {
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const router = useRouter();
   const { signIn, signUp } = useAuth();
@@ -30,6 +32,7 @@ export default function AuthScreen() {
 
     setIsLoading(true);
     setError(null);
+    setIsSubmitted(true);
 
     try {
       if (!email || !password) {
@@ -65,6 +68,7 @@ export default function AuthScreen() {
       router.replace("/");
     } finally {
       setIsLoading(false);
+      setIsSubmitted(false);
     }
   };
 
@@ -174,7 +178,9 @@ export default function AuthScreen() {
               </>
             )}
 
-            {error && <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>}
+            {error && (
+              <Text style={{ color: "red", textAlign: "center" }}>{error}</Text>
+            )}
 
             <Button
               textColor="#cdcdcd"
@@ -207,6 +213,7 @@ export default function AuthScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+      <LoadingOverlay visible={isSubmitted} message={"Welcome..."} />
     </SafeAreaView>
   );
 }

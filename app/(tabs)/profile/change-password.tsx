@@ -7,6 +7,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { TouchableOpacity } from "react-native-gesture-handler";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { validatePassword } from "@/lib/auth-context";
+import LoadingOverlay from "@/app/components/LoadingOverlay";
 
 export default function ChangePasswordScreen() {
   const [error, setError] = useState("");
@@ -15,6 +16,7 @@ export default function ChangePasswordScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState("");
+  const [loadingMessage, setLoadingMessage] = useState("Just a moment..")
   const theme = useTheme();
 
   const handlePasswordChange = async () => {
@@ -37,6 +39,7 @@ export default function ChangePasswordScreen() {
       return setError("New password cannot be the same as current passwword");
     }
 
+    setLoadingMessage("Changing Password")
     setIsLoading(true);
 
     try {
@@ -57,26 +60,24 @@ export default function ChangePasswordScreen() {
   return (
     <SafeAreaView edges={["bottom"]} style={styles.container}>
       <View style={styles.topBar}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <MaterialCommunityIcons
-            name="arrow-left"
-            size={32}
-            color="#1f1f1fff"
-          />
-        </TouchableOpacity>
-        <View style={styles.header}>
-          <Text
-            style={[
-              styles.headerText,
-              { color: "white", padding: 8, fontWeight: "bold" },
-            ]}
+        <View style={styles.sideContainer}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
           >
-            Change Password
-          </Text>
+            <MaterialCommunityIcons
+              name="arrow-left"
+              size={32}
+              color="#1f1f1f"
+            />
+          </TouchableOpacity>
         </View>
+
+        <View style={styles.header}>
+          <Text style={styles.headerText}>Change Password</Text>
+        </View>
+
+        <View style={styles.sideContainer} />
       </View>
       <View style={styles.passwordContainer}>
         <TextInput
@@ -133,6 +134,7 @@ export default function ChangePasswordScreen() {
           Update Password
         </Button>
       </View>
+            <LoadingOverlay visible={isLoading} message={loadingMessage} />
     </SafeAreaView>
   );
 }
@@ -144,15 +146,23 @@ const styles = StyleSheet.create({
     backgroundColor: "white",
   },
   topBar: {
-    alignItems: "center",
+    width: "100%",
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 64,
+    position: "relative",
   },
   header: {
     backgroundColor: "#555555",
     paddingHorizontal: 24,
+    paddingVertical: 8,
     borderRadius: 50,
   },
   headerText: {
+    color: "#ffffff",
+    fontWeight: "bold",
+    fontSize: 18,
     textAlign: "center",
   },
   input: {
@@ -161,10 +171,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: 15,
-    marginRight: 28,
+    padding: 12,
+  },
+  sideContainer: {
+    width: 56,
+    justifyContent: "center",
     alignItems: "flex-start",
-    color: "#000",
+    marginRight: 36,
   },
   button: {
     marginTop: 20,
