@@ -59,11 +59,6 @@ export const EventsDataProvider: React.FC<React.PropsWithChildren<object>> = ({
     };
   }, []);
 
-  const logAndAlertError = (message: string, error: unknown) => {
-    console.error(message, error);
-    console.log(`[APPWRITE ERROR] ${message}: Failed to load data.`);
-  };
-
   //Retrieve events
 
   const fetchMyEvents = useCallback(async () => {
