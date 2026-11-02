@@ -13,7 +13,7 @@ export default {
         "aps-environment": "development",
       },
       supportsTablet: true,
-      bundleIdentifier: "co.dylan.gunda.ourDays",
+      bundleIdentifier: "com.dylan.gunda.ourDays",
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
