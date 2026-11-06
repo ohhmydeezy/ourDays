@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "53892bc0-e3bc-43ef-b6e6-85eff277258b"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.dylan.gunda.ourdaysnotifications",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    }
+  }
+}

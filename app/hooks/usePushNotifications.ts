@@ -4,6 +4,9 @@ import Constants from "expo-constants";
 import { Platform, AppState } from "react-native";
 import { useRouter } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth-context";
+import { Query } from "react-native-appwrite";
+import { DATABASE_ID, databases, USER_COLLECTION_ID } from "@/lib/appwrite";
 
 interface PushNotificationState {
   expoPushToken?: Notifications.ExpoPushToken;
@@ -12,7 +15,7 @@ interface PushNotificationState {
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldPlaySound: false,
+    shouldPlaySound: true,
     shouldSetBadge: true,
     shouldShowAlert: true,
     shouldShowBanner: true,
@@ -43,9 +46,16 @@ async function registerForPushNotificationsAsync(): Promise<
   }
 
   try {
-    return await Notifications.getExpoPushTokenAsync({
-      projectId: Constants.expoConfig?.extra?.eas?.projectId,
-    });
+    const projectId =
+      Constants.easConfig?.projectId ??
+      Constants.expoConfig?.extra?.eas?.projectId;
+
+    if (!projectId) {
+      console.warn("Expo project ID is missing ");
+      return;
+    }
+
+    return await Notifications.getExpoPushTokenAsync({ projectId });
   } catch (error) {
     console.error("Error getting push token:", error);
   }
@@ -56,6 +66,9 @@ export const usePushNotifications = (): PushNotificationState => {
     useState<Notifications.ExpoPushToken>();
   const [notification, setNotification] =
     useState<Notifications.Notification>();
+  const { user } = useAuth();
+  const userId = user?.$id;
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
   const notificationListener = useRef<
     Notifications.EventSubscription | undefined
@@ -115,5 +128,66 @@ export const usePushNotifications = (): PushNotificationState => {
       sub.remove();
     };
   }, [handleNotificationResponse]);
+  useEffect(() => {
+    if (!userId || !expoPushToken?.data) return;
+
+    let cancelled = false;
+
+    const saveNotificationSettings = async () => {
+      try {
+        const result = await databases.listDocuments(
+          DATABASE_ID,
+          USER_COLLECTION_ID,
+          [Query.equal("userId", userId)],
+        );
+
+        if (cancelled) return;
+
+        if (result.documents.length === 0) {
+          console.warn("User document not found.");
+          return;
+        }
+
+        const userDoc = result.documents[0];
+        const token = expoPushToken.data;
+
+        const updates: {
+          expoPushToken?: string,
+          timezone?: string
+        } = {}
+
+        if(userDoc.expoPushToken !== token) {
+          updates.expoPushToken = token
+        }
+
+        if(userDoc.timezone !== timezone) {
+          updates.timezone = timezone
+        }
+
+        if(Object.keys(updates).length === 0) return
+
+        if(cancelled) return
+
+
+        await databases.updateDocument(
+          DATABASE_ID,
+          USER_COLLECTION_ID,
+          userDoc.$id,
+          updates,
+        );
+
+        console.log("Notification settings saved successfully");
+      } catch (error) {
+        console.error("Failed to save notification settings:", error);
+      }
+    };
+
+    void saveNotificationSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, expoPushToken?.data, timezone]);
+
   return { expoPushToken, notification };
 };

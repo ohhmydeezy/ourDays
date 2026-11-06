@@ -13,7 +13,7 @@ import {
   USER_COLLECTION_ID,
 } from "./appwrite";
 import { UserPrefs } from "@/types/database.type";
-import * as Notifications from "expo-notifications";
+import Purchases from "react-native-purchases";
 
 
 type AuthContextType = {
@@ -87,13 +87,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SafeUser | null>(null);
   const [connectedUser, setConnectedUser] = useState<any>(null);
   const [isLoadingUser, setIsLoadingUser] = useState<boolean>(true);
+  const userId = user?.$id
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const identifyRevenueCatUser = async () => {
+      try {
+        const result = await Purchases.logIn(userId);
+
+        console.log("RevenueCat linked to Appwrite user:", userId);
+        console.log(
+          "OurDays Pro active:",
+          !!result.customerInfo.entitlements.active["ourdays_pro"],
+        );
+      } catch (error) {
+        console.error("RevenueCat login failed:", error);
+      }
+    };
+
+    void identifyRevenueCatUser();
+  }, [userId]);
 
   const getUser = useCallback(async () => {
     try {
       const session = await account.get();
       setUser(toSafeUser(session));
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
+      console.error("Error Finding User:", error)
       setUser(null);
     } finally {
       setIsLoadingUser(false);
@@ -101,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const fetchConnectedUser = useCallback(async () => {
-    if (!user || !user?.$id) {
+    if (!userId) {
       setConnectedUser(null);
       return;
     }
@@ -110,7 +131,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userResult = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
+        [Query.equal("userId", userId)]
       );
 
       if (!userResult.documents.length) {
@@ -139,55 +160,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Error fetching connected user:", error);
       setConnectedUser(null);
+   
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.$id]);
+  }, [userId]);
 
   useEffect(() => {
-    getUser();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const loadUser = async () => {
+      await getUser();
+    };
 
-  useEffect(() => {
-    if (user?.$id) {
-      fetchConnectedUser();
-    } else {
-      setConnectedUser(null);
-    }
-  }, [user?.$id, fetchConnectedUser]);
-
+    void loadUser();
+  }, [getUser]);
 
 useEffect(() => {
-  if (!user?.$id) return;
+  if (!userId) return;
 
-  const saveExpoPushToken = async () => {
-    try {
-      const userDocs = await databases.listDocuments(
-        DATABASE_ID,
-        USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)],
-      );
-      if (!userDocs.documents.length) return;
-
-      const userDoc = userDocs.documents[0];
-      if (userDoc.expoPushToken) return; // already saved
-
-      const { data: token } = await Notifications.getExpoPushTokenAsync();
-      if (!token) return;
-
-      await databases.updateDocument(
-        DATABASE_ID,
-        USER_COLLECTION_ID,
-        userDoc.$id,
-        { expoPushToken: token },
-      );
-    } catch (err) {
-      console.warn("Failed to save Expo push token:", err);
-    }
+  const loadConnectedUser = async () => {
+    await fetchConnectedUser();
   };
 
-  saveExpoPushToken();
-}, [user?.$id]);
+  void loadConnectedUser();
+}, [userId, fetchConnectedUser]);
 
   const refreshUser = async () => {
     try {
@@ -210,12 +203,12 @@ useEffect(() => {
     if (!shareCode) return "Share code is required";
 
     try {
-      if (!user?.$id) return "No authenticated user found";
+      if (!userId) return "No authenticated user found";
 
       const currentUserDocs = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
+        [Query.equal("userId", userId)]
       );
       if (!currentUserDocs.documents.length) {
         return "Current user document not found";
@@ -283,7 +276,7 @@ useEffect(() => {
       const currentUserDocs = await databases.listDocuments(
         DATABASE_ID,
         USER_COLLECTION_ID,
-        [Query.equal("userId", user.$id)]
+        [Query.equal("userId", userId!)]
       );
       if (!currentUserDocs.documents.length) {
         return "Current user document not found";
@@ -405,15 +398,22 @@ useEffect(() => {
 
   //Sign Out function
   
-  const signOut = async () => {
+const signOut = async () => {
+  try {
+    await account.deleteSession("current");
+
     try {
-      await account.deleteSession("current");
-      setUser(null);
-      setConnectedUser(null);
+      await Purchases.logOut();
     } catch (error) {
-      console.log(error);
+      console.error("RevenueCat logout failed:", error);
     }
-  };
+
+    setUser(null);
+    setConnectedUser(null);
+  } catch (error) {
+    console.error("Sign out failed:", error);
+  }
+};
 
 
 
